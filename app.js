@@ -857,6 +857,152 @@ function exportToExcel() {
   showToast('Excel file exported!', 'success');
 }
 
+// ===== PDF EXPORT =====
+function exportToPDF() {
+  if (!farmers.length) { showToast('No farmer data to export', 'error'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const today = new Date().toLocaleDateString('en-PK', { year: 'numeric', month: 'long', day: 'numeric' });
+  const totalBags = farmers.reduce((s, f) => s + (f.products || []).reduce((ps, p) => ps + (p.bags || 0), 0), 0);
+  const dealers = new Set(farmers.map(f => f.dealer).filter(Boolean)).size;
+
+  // ── Header bar ──
+  doc.setFillColor(10, 17, 114);
+  doc.rect(0, 0, pageW, 22, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('AgriTrack – Farmer Data History', 14, 10);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Generated: ' + today, 14, 17);
+
+  // ── Summary stats ──
+  doc.setTextColor(10, 17, 114);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  const stats = [
+    { label: 'Total Farmers', value: farmers.length },
+    { label: 'Total Bags Sold', value: totalBags },
+    { label: 'Active Dealers', value: dealers }
+  ];
+  const colW = (pageW - 28) / stats.length;
+  stats.forEach((s, i) => {
+    const x = 14 + i * colW;
+    doc.setFillColor(240, 242, 255);
+    doc.roundedRect(x, 26, colW - 4, 14, 2, 2, 'F');
+    doc.setFontSize(14);
+    doc.setTextColor(10, 17, 114);
+    doc.text(String(s.value), x + (colW - 4) / 2, 33, { align: 'center' });
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 100);
+    doc.setFont('helvetica', 'normal');
+    doc.text(s.label, x + (colW - 4) / 2, 38, { align: 'center' });
+  });
+
+  // ── Main farmer table ──
+  const head = [['#', 'Name', 'Contact', 'Village / Mauza', 'Tehsil', 'District', 'Province', 'Land (Ac)', 'Crops', 'Dealer', 'Date Added']];
+  const body = farmers.map((f, i) => [
+    i + 1,
+    f.name || '',
+    f.contact || '',
+    f.village || '—',
+    f.tehsil || '—',
+    f.district || '—',
+    f.province || '—',
+    f.landArea || '—',
+    (f.crops || []).join(', ') || '—',
+    f.dealer || '—',
+    f.date ? new Date(f.date).toLocaleDateString('en-PK') : '—'
+  ]);
+
+  doc.autoTable({
+    head,
+    body,
+    startY: 44,
+    styles: { fontSize: 7.5, cellPadding: 2.5, overflow: 'linebreak' },
+    headStyles: { fillColor: [10, 17, 114], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+    alternateRowStyles: { fillColor: [245, 247, 255] },
+    columnStyles: {
+      0: { cellWidth: 8, halign: 'center' },
+      7: { cellWidth: 16, halign: 'center' },
+      10: { cellWidth: 22 }
+    },
+    margin: { left: 14, right: 14 },
+    didDrawPage: (data) => {
+      // Footer on every page
+      const pCount = doc.internal.getNumberOfPages();
+      doc.setFontSize(7);
+      doc.setTextColor(150);
+      doc.text(
+        'AgriTrack  |  Page ' + data.pageNumber + ' of ' + pCount,
+        pageW / 2,
+        doc.internal.pageSize.getHeight() - 5,
+        { align: 'center' }
+      );
+    }
+  });
+
+  // ── Per-farmer fertilizer detail pages ──
+  farmers.forEach((f) => {
+    const prods = (f.products || []).filter(p => p.bags > 0);
+    if (!prods.length) return;
+
+    doc.addPage();
+
+    // Farmer name header
+    doc.setFillColor(10, 17, 114);
+    doc.rect(0, 0, pageW, 16, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Fertilizer Detail – ' + (f.name || ''), 14, 10);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    const loc = [f.village, f.tehsil, f.district].filter(Boolean).join(', ');
+    doc.text(loc || 'Location not specified', 14, 15);
+
+    // Info row
+    doc.setTextColor(40, 40, 60);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Contact: ' + (f.contact || '—'), 14, 23);
+    doc.text('Dealer: ' + (f.dealer || '—'), 80, 23);
+    doc.text('Land: ' + (f.landArea || '—') + ' Acres', 150, 23);
+    doc.text('Crops: ' + ((f.crops || []).join(', ') || '—'), 14, 29);
+
+    doc.autoTable({
+      head: [['Product', 'Brand', 'Bags', 'Dealer']],
+      body: prods.map(p => [p.name || '', p.brand || '', p.bags || 0, p.dealer || f.dealer || '']),
+      startY: 34,
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [34, 139, 34], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [240, 255, 240] },
+      columnStyles: {
+        2: { halign: 'center', cellWidth: 20 }
+      },
+      margin: { left: 14, right: 14 },
+      didDrawPage: (data) => {
+        const pCount = doc.internal.getNumberOfPages();
+        doc.setFontSize(7);
+        doc.setTextColor(150);
+        doc.text(
+          'AgriTrack  |  Page ' + data.pageNumber + ' of ' + pCount,
+          pageW / 2,
+          doc.internal.pageSize.getHeight() - 5,
+          { align: 'center' }
+        );
+      }
+    });
+  });
+
+  doc.save('AgriTrack_History_' + new Date().toISOString().slice(0, 10) + '.pdf');
+  showToast('PDF exported successfully!', 'success');
+}
+
 // ===== MODAL =====
 function initModal() {
   document.getElementById('modalClose').addEventListener('click', () => {
@@ -904,6 +1050,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   // Export
   document.getElementById('exportBtn').addEventListener('click', exportToExcel);
+  document.getElementById('exportPdfBtn').addEventListener('click', exportToPDF);
 
   // Insights
   document.getElementById('runInsightBtn').addEventListener('click', runInsights);
