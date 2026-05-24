@@ -412,20 +412,20 @@ function renderFarmersTable(data) {
     const date = f.date ? new Date(f.date).toLocaleDateString('en-PK') : '�';
     return `<tr>
       <td>${i + 1}</td>
-      <td><strong>${escHtml(f.name)}</strong></td>
-      <td>${escHtml(f.contact)}</td>
-      <td style="font-size:0.82rem">${escHtml(villageTehsil)}</td>
-      <td style="font-size:0.82rem">${escHtml(district)}</td>
-      <td style="font-size:0.8rem;max-width:160px" title="${escHtml(f.fullAddress||'')}">${escHtml(addrShort)}</td>
-      <td>${f.landArea || '�'}</td>
-      <td>${crops}</td>
-      <td>${escHtml(f.dealer)}</td>
-      <td>${date}</td>
-      <td>
+      <td data-label="Name"><strong>${escHtml(f.name)}</strong></td>
+      <td data-label="Contact">${escHtml(f.contact)}</td>
+      <td data-label="Village/Tehsil" style="font-size:0.82rem">${escHtml(villageTehsil)}</td>
+      <td data-label="District" style="font-size:0.82rem">${escHtml(district)}</td>
+      <td data-label="Address" style="font-size:0.8rem;max-width:160px" title="${escHtml(f.fullAddress||'')}">${escHtml(addrShort)}</td>
+      <td data-label="Land (Ac)">${f.landArea || '—'}</td>
+      <td data-label="Crops">${crops}</td>
+      <td data-label="Dealer">${escHtml(f.dealer)}</td>
+      <td data-label="Date">${date}</td>
+      <td data-label="Actions">
         <div class="action-btns">
-          <button class="btn btn-outline btn-sm" onclick="viewFarmer('${f.id}')">?? View</button>
-          <button class="btn btn-outline btn-sm" onclick="editFarmer('${f.id}')">??</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteFarmer('${f.id}')">??</button>
+          <button class="btn btn-outline btn-sm" onclick="viewFarmer('${f.id}')">👁 View</button>
+          <button class="btn btn-outline btn-sm" onclick="editFarmer('${f.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteFarmer('${f.id}')">🗑</button>
         </div>
       </td>
     </tr>`;

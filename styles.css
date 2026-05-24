@@ -514,3 +514,191 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .custom-crop-tag button:hover {
   background: rgba(21,101,192,0.15);
 }
+
+/* ===== MOBILE RESPONSIVE (comprehensive) ===== */
+
+/* --- Base touch improvements --- */
+@media (max-width: 768px) {
+
+  /* Topbar */
+  .topbar-actions .btn span:not(.btn-icon) { display: none; }
+  .topbar-actions .btn::before { content: '⬇'; }
+  .topbar-actions .btn { padding: 8px 12px; font-size: 0.85rem; }
+
+  /* Page padding */
+  .page-content { padding: 12px; }
+
+  /* Stats — 2 columns on tablet */
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat-card { padding: 14px 12px; gap: 10px; }
+  .stat-icon { font-size: 1.6rem; }
+  .stat-value { font-size: 1.4rem; }
+
+  /* Charts */
+  .charts-grid { grid-template-columns: 1fr; gap: 14px; }
+  .chart-card { padding: 14px; }
+  .chart-card canvas { max-height: 220px; }
+
+  /* Filter bar */
+  .filter-bar { flex-wrap: wrap; gap: 8px; }
+  .filter-bar select { flex: 1; }
+
+  /* Form container */
+  .form-container { padding: 16px 12px; border-radius: 8px; }
+  .form-title { font-size: 1.1rem; margin-bottom: 16px; }
+  .form-grid { grid-template-columns: 1fr; gap: 12px; }
+  .form-group input,
+  .form-group select,
+  .form-group textarea { font-size: 16px; /* prevents iOS zoom */ padding: 10px 12px; }
+
+  /* Checkbox crops — full width pills */
+  .checkbox-group { gap: 8px; }
+  .checkbox-item { font-size: 0.82rem; padding: 6px 10px; }
+
+  /* Location row */
+  .location-row { flex-direction: column; align-items: stretch; }
+  .location-row input { min-width: unset; width: 100%; }
+  .location-row .btn { width: 100%; justify-content: center; }
+  #mapPicker { height: 220px; }
+
+  /* Product rows */
+  .product-grid { grid-template-columns: 1fr; }
+  .product-row { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; }
+  .product-name { font-size: 0.9rem; font-weight: 600; min-width: unset; width: 100%; }
+  .product-row input[type="number"],
+  .product-row input[type="text"] { width: 100%; min-width: unset; font-size: 16px; }
+
+  /* Form actions */
+  .form-actions { flex-direction: column-reverse; gap: 10px; }
+  .form-actions .btn { width: 100%; justify-content: center; padding: 12px; }
+
+  /* Farmers table — card layout on mobile */
+  .table-wrapper { border-radius: 8px; box-shadow: none; }
+  .data-table thead { display: none; }
+  .data-table, .data-table tbody, .data-table tr, .data-table td { display: block; width: 100%; }
+  .data-table tr {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    padding: 12px;
+    box-shadow: var(--shadow);
+  }
+  .data-table td {
+    padding: 4px 0;
+    border-bottom: none;
+    font-size: 0.88rem;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .data-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-muted);
+    min-width: 90px;
+    font-size: 0.78rem;
+    padding-top: 2px;
+    flex-shrink: 0;
+  }
+  /* Hide serial number cell */
+  .data-table td:first-child { display: none; }
+  /* Action buttons full width */
+  .data-table td:last-child { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .action-btns { flex-wrap: wrap; gap: 8px; width: 100%; }
+  .action-btns .btn { flex: 1; justify-content: center; min-width: 70px; }
+
+  /* Search bar */
+  .search-bar input { max-width: 100%; font-size: 16px; }
+  .list-header { flex-direction: column; align-items: stretch; gap: 10px; }
+
+  /* Upload */
+  .upload-container { padding: 0; }
+  .drop-zone { padding: 30px 16px; }
+  .upload-actions { flex-direction: column; }
+  .upload-actions .btn { width: 100%; justify-content: center; }
+
+  /* Insights */
+  .insights-filter { flex-direction: column; align-items: stretch; gap: 10px; }
+  .insights-filter input { width: 100%; font-size: 16px; }
+  .insights-filter .btn { width: 100%; justify-content: center; }
+  .insight-cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .insight-card { padding: 14px 10px; }
+  .insight-card .ic-value { font-size: 1.1rem; }
+
+  /* Modal */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal { max-width: 100%; max-height: 92vh; border-radius: 16px 16px 0 0; }
+  .modal-body { padding: 16px; }
+  .detail-row { flex-direction: column; gap: 2px; }
+  .detail-label { min-width: unset; }
+  .fertilizer-table { font-size: 0.78rem; }
+  .fertilizer-table th, .fertilizer-table td { padding: 6px 8px; }
+
+  /* Toast */
+  .toast { left: 12px; right: 12px; bottom: 16px; text-align: center; }
+
+  /* Nearby page */
+  #nearbyMap { height: 260px; }
+  .nearby-item { gap: 10px; padding: 10px 12px; }
+  .nearby-action-btn { display: none; } /* tap row to view on mobile */
+  .nearby-meta { white-space: normal; line-height: 1.5; }
+}
+
+/* --- Small phones --- */
+@media (max-width: 480px) {
+  html { font-size: 14px; }
+
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat-card { padding: 12px 10px; }
+  .stat-value { font-size: 1.3rem; }
+
+  .insight-cards { grid-template-columns: repeat(2, 1fr); }
+
+  .topbar { padding: 0 12px; gap: 10px; }
+  .page-title { font-size: 1rem; }
+
+  .form-container { padding: 12px 10px; }
+  .section-title { font-size: 0.92rem; }
+
+  .checkbox-item { font-size: 0.78rem; padding: 5px 8px; }
+
+  #mapPicker { height: 180px; }
+
+  .nearby-dist-value { font-size: 0.9rem; }
+  .nearby-name { font-size: 0.88rem; }
+}
+
+/* --- Ensure inputs don't zoom on iOS --- */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="date"],
+  select,
+  textarea { font-size: 16px !important; }
+}
+
+/* ===== PWA / STANDALONE MODE ===== */
+
+/* Safe area insets for iPhone notch / home bar */
+@supports (padding: env(safe-area-inset-top)) {
+  .topbar {
+    padding-left: max(24px, env(safe-area-inset-left));
+    padding-right: max(24px, env(safe-area-inset-right));
+  }
+  .sidebar {
+    padding-top: env(safe-area-inset-top);
+  }
+  .toast {
+    bottom: max(24px, env(safe-area-inset-bottom));
+  }
+}
+
+/* When running as installed PWA (standalone) */
+@media (display-mode: standalone) {
+  .topbar {
+    padding-top: env(safe-area-inset-top);
+    height: calc(var(--topbar-h) + env(safe-area-inset-top));
+  }
+}

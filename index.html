@@ -2,10 +2,39 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>AgriTrack – Farmer & Fertilizer Management</title>
+
+  <!-- ===== PWA META TAGS ===== -->
+  <meta name="description" content="Manage farmers, fertilizer usage, and agricultural data" />
+  <meta name="theme-color" content="#2e7d32" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="AgriTrack" />
+  <meta name="application-name" content="AgriTrack" />
+  <meta name="msapplication-TileColor" content="#2e7d32" />
+  <meta name="msapplication-TileImage" content="/icons/icon-144.png" />
+
+  <!-- ===== PWA MANIFEST ===== -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- ===== APPLE TOUCH ICONS ===== -->
+  <link rel="apple-touch-icon" href="/icons/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="72x72"  href="/icons/icon-72.png" />
+  <link rel="apple-touch-icon" sizes="96x96"  href="/icons/icon-96.png" />
+  <link rel="apple-touch-icon" sizes="128x128" href="/icons/icon-128.png" />
+  <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png" />
+
+  <!-- ===== FAVICON ===== -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="32x32"   href="/icons/icon-96.png" />
+
+  <!-- ===== STYLES ===== -->
   <link rel="stylesheet" href="styles.css" />
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -397,5 +426,16 @@
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="app.js"></script>
+
+  <!-- ===== SERVICE WORKER REGISTRATION ===== -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('[PWA] Service worker registered:', reg.scope))
+          .catch(err => console.warn('[PWA] Service worker failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>

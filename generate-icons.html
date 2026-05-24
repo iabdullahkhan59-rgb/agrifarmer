@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head><title>Icon Generator</title></head>
+<body>
+<p>Generating icons... check the downloads folder.</p>
+<canvas id="c"></canvas>
+<script>
+// Generates all required PWA icons and triggers download
+const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+function drawIcon(size) {
+  canvas.width = size;
+  canvas.height = size;
+  const r = size * 0.12; // corner radius
+
+  // Background — green gradient
+  const grad = ctx.createLinearGradient(0, 0, size, size);
+  grad.addColorStop(0, '#2e7d32');
+  grad.addColorStop(1, '#1b5e20');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.lineTo(size - r, 0);
+  ctx.quadraticCurveTo(size, 0, size, r);
+  ctx.lineTo(size, size - r);
+  ctx.quadraticCurveTo(size, size, size - r, size);
+  ctx.lineTo(r, size);
+  ctx.quadraticCurveTo(0, size, 0, size - r);
+  ctx.lineTo(0, r);
+  ctx.quadraticCurveTo(0, 0, r, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  // Wheat emoji as icon
+  ctx.font = `${size * 0.55}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🌾', size / 2, size / 2 + size * 0.03);
+
+  // "AT" text at bottom for small sizes
+  if (size >= 128) {
+    ctx.font = `bold ${size * 0.13}px 'Segoe UI', sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillText('AgriTrack', size / 2, size * 0.88);
+  }
+}
+
+function download(size) {
+  drawIcon(size);
+  const a = document.createElement('a');
+  a.download = `icon-${size}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+// Download all icons with a small delay between each
+sizes.forEach((size, i) => {
+  setTimeout(() => download(size), i * 300);
+});
+</script>
+</body>
+</html>
