@@ -34,12 +34,12 @@ const PRODUCTS = {
     { id: 'fatima_generic',   name: 'Sarsabz Product (Generic)', brand: 'Fatima (Sarsabz)' }
   ],
   yara: [
-    { id: 'yara_tropicote',   name: 'YaraLiva Tropicote',         brand: 'Yara International' },
-    { id: 'yara_bortrac',     name: 'YaraVita Bortrac',           brand: 'Yara International' },
-    { id: 'yara_cropboost',   name: 'YaraVita Crop Boost',        brand: 'Yara International' },
-    { id: 'yara_frutrel',     name: 'YaraVita Frutrel',           brand: 'Yara International' },
-    { id: 'yara_solatrel',    name: 'YaraVita Solatrel',          brand: 'Yara International' },
-    { id: 'yara_amplix',      name: 'Yara Amplix Optitrac (Biostimulant)', brand: 'Yara International' }
+    { id: 'yara_tropicote',   name: 'YaraLiva Tropicote',                  brand: 'Yara International', unit: 'bags'    },
+    { id: 'yara_bortrac',     name: 'YaraVita Bortrac',                    brand: 'Yara International', unit: 'bottles' },
+    { id: 'yara_cropboost',   name: 'YaraVita Crop Boost',                 brand: 'Yara International', unit: 'bottles' },
+    { id: 'yara_frutrel',     name: 'YaraVita Frutrel',                    brand: 'Yara International', unit: 'bottles' },
+    { id: 'yara_solatrel',    name: 'YaraVita Solatrel',                   brand: 'Yara International', unit: 'bottles' },
+    { id: 'yara_amplix',      name: 'Yara Amplix Optitrac (Biostimulant)', brand: 'Yara International', unit: 'bottles' }
   ]
 };
 
@@ -260,15 +260,18 @@ function renderProductInputs() {
   Object.entries(PRODUCTS).forEach(([brand, products]) => {
     const container = document.getElementById(brand + 'Products');
     if (!container) return;
-    container.innerHTML = products.map(p => `
-      <div class="product-row" data-product-id="${p.id}">
+    container.innerHTML = products.map(p => {
+      const unit = p.unit || 'bags';
+      const label = unit.charAt(0).toUpperCase() + unit.slice(1); // "Bags" or "Bottles"
+      return `
+      <div class="product-row" data-product-id="${p.id}" data-unit="${unit}">
         <span class="product-name">${p.name}</span>
-        <label>Bags:</label>
+        <label>${label}:</label>
         <input type="number" class="prod-bags" data-id="${p.id}" min="0" placeholder="0" />
         <label>Dealer:</label>
         <input type="text" class="prod-dealer" data-id="${p.id}" placeholder="Dealer name" />
       </div>
-    `).join('');
+    `}).join('');
   });
 }
 
@@ -276,11 +279,12 @@ function getProductData() {
   const data = [];
   document.querySelectorAll('.product-row').forEach(row => {
     const id = row.dataset.productId;
-    const bags = parseInt(row.querySelector('.prod-bags').value) || 0;
+    const unit = row.dataset.unit || 'bags';
+    const qty = parseInt(row.querySelector('.prod-bags').value) || 0;
     const dealer = row.querySelector('.prod-dealer').value.trim();
-    if (bags > 0) {
+    if (qty > 0) {
       const prod = ALL_PRODUCTS.find(p => p.id === id);
-      data.push({ id, name: prod ? prod.name : id, brand: prod ? prod.brand : '', bags, dealer });
+      data.push({ id, name: prod ? prod.name : id, brand: prod ? prod.brand : '', bags: qty, unit, dealer });
     }
   });
   return data;
@@ -449,9 +453,11 @@ function viewFarmer(id) {
   if (!f) return;
   const loc = (f.lat && f.lng) ? `${f.lat}, ${f.lng}` : 'Not set';
   const crops = (f.crops || []).join(', ') || '�';
-  const prodRows = (f.products || []).map(p =>
-    `<tr><td>${escHtml(p.name)}</td><td>${escHtml(p.brand)}</td><td>${p.bags}</td><td>${escHtml(p.dealer)}</td></tr>`
-  ).join('') || '<tr><td colspan="4" style="text-align:center;color:#999">No products recorded</td></tr>';
+  const prodRows = (f.products || []).map(p => {
+    const unit = p.unit || 'bags';
+    const qtyLabel = unit.charAt(0).toUpperCase() + unit.slice(1); // "Bags" or "Bottles"
+    return `<tr><td>${escHtml(p.name)}</td><td>${escHtml(p.brand)}</td><td>${p.bags} ${qtyLabel}</td><td>${escHtml(p.dealer)}</td></tr>`;
+  }).join('') || '<tr><td colspan="4" style="text-align:center;color:#999">No products recorded</td></tr>';
   document.getElementById('modalTitle').textContent = f.name;
   document.getElementById('modalBody').innerHTML = `
     <div class="detail-row"><span class="detail-label">Contact:</span><span class="detail-value">${escHtml(f.contact)}</span></div>
@@ -467,7 +473,7 @@ function viewFarmer(id) {
     <div class="detail-row"><span class="detail-label">Date Added:</span><span class="detail-value">${f.date ? new Date(f.date).toLocaleString('en-PK') : '�'}</span></div>
     <h4 style="margin:16px 0 8px;color:#0a1172">Fertilizer Usage</h4>
     <table class="fertilizer-table">
-      <thead><tr><th>Product</th><th>Brand</th><th>Bags</th><th>Dealer</th></tr></thead>
+      <thead><tr><th>Product</th><th>Brand</th><th>Quantity</th><th>Dealer</th></tr></thead>
       <tbody>${prodRows}</tbody>
     </table>`;
   document.getElementById('modalOverlay').classList.remove('hidden');
