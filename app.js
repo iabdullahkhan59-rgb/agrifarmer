@@ -167,7 +167,7 @@ async function deleteFarmerFromDB(id) {
 // Load all farmers
 async function loadFarmers() {
   console.log('[Supabase] Loading farmers...');
-  const { data, error } = await sbFetch('/farmers?order=date.desc', 'GET');
+  const { data, error } = await sbFetch('/farmers?order=date.asc', 'GET');
   if (error) {
     console.error('[Supabase] Load error:', error);
     try { farmers = JSON.parse(localStorage.getItem('agritrack_farmers') || '[]'); } catch(e) { farmers = []; }
@@ -512,27 +512,6 @@ async function deleteFarmer(id) {
   showToast('Farmer deleted.', 'success');
 }
 
-async function deleteAllFarmers() {
-  if (!farmers.length) { showToast('No farmers to delete.', 'error'); return; }
-  if (!confirm(`Delete ALL ${farmers.length} farmer records? This cannot be undone.`)) return;
-
-  // Clear local state and localStorage immediately
-  farmers = [];
-  localStorage.removeItem('agritrack_farmers');
-  renderFarmersTable(farmers);
-  renderDashboard();
-  showToast('Deleting all farmers…', '');
-
-  // Delete from Supabase
-  const { error } = await sbFetch('/farmers?id=neq.null_placeholder', 'DELETE');
-  // neq filter above won't match — use a proper "not is null" filter
-  const { error: err2 } = await sbFetch('/farmers?id=not.is.null', 'DELETE');
-  if (err2 && err2.message) {
-    console.warn('[Supabase] Delete all error:', err2);
-  }
-  showToast('All farmers deleted successfully.', 'success');
-}
-
 // ===== SEARCH =====
 function initSearch() {
   document.getElementById('searchInput').addEventListener('input', function() {
@@ -791,61 +770,14 @@ function handleFileUpload(file) {
 function showUploadPreview(rows) {
   const preview = rows.slice(0, 10);
   const headers = Object.keys(rows[0]);
-
-  // Show column mapping hints
-  const norm = s => String(s).toLowerCase().replace(/[\s_\-\.()\/\\#*]/g, '');
-  const detect = (keys) => {
-    for (const k of keys) {
-      const nk = norm(k);
-      const found = headers.find(h => norm(h) === nk);
-      if (found) return found;
-    }
-    for (const k of keys) {
-      const nk = norm(k);
-      const found = headers.find(h => norm(h).includes(nk) || nk.includes(norm(h)));
-      if (found) return found;
-    }
-    return null;
-  };
-
-  const fieldMap = [
-    { field: 'Farmer Name',   detected: detect(['farmername','farmer name','name','farmer','grower','kisan']) },
-    { field: 'Contact',       detected: detect(['contactnumber','contact number','contact no','phone','mobile','cell']) },
-    { field: 'Dealer',        detected: detect(['dealername','dealer name','dealer','agent','retailer']) },
-    { field: 'Land Area',     detected: detect(['totallandarea','total land area','landarea','land area','acres','area']) },
-    { field: 'Crops',         detected: detect(['croppattern','crop pattern','crops','crop','fasal']) },
-    { field: 'Village/Mauza', detected: detect(['village','mauza','villagemauza','chak','locality']) },
-    { field: 'Tehsil',        detected: detect(['tehsil','taluka']) },
-    { field: 'District',      detected: detect(['district','zila','city']) },
-    { field: 'Province',      detected: detect(['province','state','suba']) },
-    { field: 'Address',       detected: detect(['fulladdress','full address','address','location']) },
-    { field: 'Latitude',      detected: detect(['latitude','lat']) },
-    { field: 'Longitude',     detected: detect(['longitude','lng','long','lon']) },
-  ];
-
-  const mappingHtml = `
-    <div class="upload-mapping">
-      <div class="upload-mapping-title">📋 Detected Column Mapping (${rows.length} rows)</div>
-      <div class="upload-mapping-grid">
-        ${fieldMap.map(m => `
-          <div class="mapping-item ${m.detected ? 'mapping-ok' : 'mapping-miss'}">
-            <span class="mapping-field">${m.field}</span>
-            <span class="mapping-arrow">→</span>
-            <span class="mapping-col">${m.detected ? escHtml(m.detected) : '⚠ Not found'}</span>
-          </div>
-        `).join('')}
-      </div>
-    </div>`;
-
   const tableHtml = `
     <table class="data-table">
       <thead><tr>${headers.map(h => '<th>' + escHtml(h) + '</th>').join('')}</tr></thead>
       <tbody>${preview.map(row =>
-        '<tr>' + headers.map(h => '<td>' + escHtml(String(row[h] ?? '')) + '</td>').join('') + '</tr>'
+        '<tr>' + headers.map(h => '<td>' + escHtml(String(row[h])) + '</td>').join('') + '</tr>'
       ).join('')}</tbody>
     </table>`;
-
-  document.getElementById('previewTableWrapper').innerHTML = mappingHtml + tableHtml;
+  document.getElementById('previewTableWrapper').innerHTML = tableHtml;
   document.getElementById('uploadPreview').classList.remove('hidden');
   showToast('File loaded: ' + rows.length + ' records found', 'success');
 }
@@ -853,136 +785,46 @@ function showUploadPreview(rows) {
 async function importUploadedData() {
   if (!parsedUploadRows.length) return;
   let imported = 0;
-
   parsedUploadRows.forEach(row => {
-    // Normalize a key: lowercase, remove spaces/underscores/hyphens/dots/brackets
-    const norm = s => String(s).toLowerCase().replace(/[\s_\-\.()\/\\#*]/g, '');
-
-    // Get value by trying multiple possible column name variants
+    // Auto-map common column names (case-insensitive)
     const get = (keys) => {
-      const rowKeys = Object.keys(row);
       for (const k of keys) {
-        const nk = norm(k);
-        const found = rowKeys.find(rk => norm(rk) === nk);
-        if (found !== undefined && row[found] !== '' && row[found] !== null && row[found] !== undefined) {
-          return String(row[found]).trim();
-        }
-      }
-      // Fallback: partial match (key contains any of the search terms)
-      for (const k of keys) {
-        const nk = norm(k);
-        const found = rowKeys.find(rk => norm(rk).includes(nk) || nk.includes(norm(rk)));
-        if (found !== undefined && row[found] !== '' && row[found] !== null && row[found] !== undefined) {
-          return String(row[found]).trim();
-        }
+        const found = Object.keys(row).find(rk => rk.toLowerCase().replace(/[\s_]/g,'') === k.toLowerCase().replace(/[\s_]/g,''));
+        if (found && row[found] !== '') return String(row[found]).trim();
       }
       return '';
     };
-
-    // ── Core fields ──────────────────────────────────────────────────────────
-    const name = get([
-      'farmername','farmer name','name','farmer','grower','growername','grower name',
-      'kisanname','kisan name','kisan','agriculturist'
-    ]);
-
-    const contact = get([
-      'contactnumber','contact number','contact no','contactno','phone','mobile',
-      'mobileno','mobile no','phoneno','phone no','tel','telephone','cell','cellno',
-      'cell no','whatsapp','number','no'
-    ]);
-
-    const dealer = get([
-      'dealername','dealer name','dealer','agentname','agent name','agent',
-      'retailer','retailername','retailer name','shopname','shop name','shop'
-    ]);
-
-    const landAreaRaw = get([
-      'totallandarea','total land area','landarea','land area','land','acres',
-      'totalacres','total acres','acreage','area','totalarea','total area',
-      'landacres','land acres','raqba','zameen'
-    ]);
-    const landArea = parseFloat(landAreaRaw) || 0;
-
-    const cropsRaw = get([
-      'croppattern','crop pattern','crops','crop','fasal','fasalpattern',
-      'fasal pattern','cultivation','croptype','crop type','cropsown','crop sown'
-    ]);
-    const crops = cropsRaw
-      ? cropsRaw.split(/[,;\/|&+]/).map(c => c.trim()).filter(Boolean)
-      : [];
-
-    const village = get([
-      'village','mauza','villagemauza','village mauza','villagename','village name',
-      'chak','locality','gaon','deh','basti','mohalla'
-    ]);
-
-    const tehsil = get([
-      'tehsil','tehsilname','tehsil name','taluka','talukaname','taluka name','sub district'
-    ]);
-
-    const district = get([
-      'district','districtname','district name','zila','zilaname','zila name','city'
-    ]);
-
-    const province = get([
-      'province','provincename','province name','state','statename','state name',
-      'suba','subaname'
-    ]);
-
-    const fullAddress = get([
-      'fulladdress','full address','address','completeaddress','complete address',
-      'addr','location','ghar','makan','pata'
-    ]);
-
-    const lat = parseFloat(get([
-      'latitude','lat','latitude coordinate','gps lat','gpslat'
-    ])) || null;
-
-    const lng = parseFloat(get([
-      'longitude','lng','long','lon','longitude coordinate','gps long','gpslong',
-      'gpslng','gps lng'
-    ])) || null;
-
-    // ── Product fields ────────────────────────────────────────────────────────
-    // Try to read product bags from columns like "Sona Neem Coated Urea (Bags)"
-    // or "sona_neem_urea_bags" or just the product name
-    const products = [];
-    ALL_PRODUCTS.forEach(p => {
-      const bagsVal = get([
-        p.name + ' (Bags)', p.name + ' bags', p.name + '(bags)',
-        p.name, p.id, p.id + '_bags', p.id + ' bags',
-        p.name + ' (Bottles)', p.name + ' bottles'
-      ]);
-      const bags = parseInt(bagsVal) || 0;
-      if (bags > 0) {
-        const dealerVal = get([
-          p.name + ' (Dealer)', p.name + ' dealer', p.id + '_dealer', p.id + ' dealer'
-        ]);
-        const unit = p.unit || 'bags';
-        products.push({ id: p.id, name: p.name, brand: p.brand, bags, unit, dealer: dealerVal || dealer });
-      }
-    });
-
-    if (!name) return; // skip rows without a farmer name
-
+    const name = get(['farmername','name','farmer']);
+    const contact = get(['contactnumber','contact','phone','mobile','tel']);
+    const dealer = get(['dealername','dealer']);
+    const landArea = parseFloat(get(['totallandarea','landarea','land','acres'])) || 0;
+    const cropsRaw = get(['croppattern','crops','crop']);
+    const crops = cropsRaw ? cropsRaw.split(/[,;\/]/).map(c => c.trim()).filter(Boolean) : [];
+    const lat = parseFloat(get(['latitude','lat'])) || null;
+    const lng = parseFloat(get(['longitude','lng','long'])) || null;
+    const village = get(['village','mauza','villagemauza']);
+    const tehsil = get(['tehsil']);
+    const district = get(['district']);
+    const province = get(['province']);
+    const fullAddress = get(['fulladdress','address']);
+    if (!name) return; // skip rows without a name
     const farmer = {
-      id: 'f_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+      id: 'f_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
       name, contact, dealer, landArea, crops,
       village, tehsil, district, province, fullAddress,
       lat, lng,
-      products,
+      products: [],
       date: new Date().toISOString()
     };
     farmers.push(farmer);
     imported++;
   });
-
   const confirmBtn = document.getElementById('confirmUploadBtn');
   confirmBtn.disabled = true;
-  confirmBtn.textContent = '⏳ Syncing…';
+  confirmBtn.textContent = '? Syncing�';
   await saveFarmers();
   confirmBtn.disabled = false;
-  confirmBtn.textContent = '✅ Import All Records';
+  confirmBtn.textContent = '? Import All Records';
   parsedUploadRows = [];
   document.getElementById('uploadPreview').classList.add('hidden');
   document.getElementById('fileInput').value = '';
@@ -1093,8 +935,6 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.getElementById('cancelUploadBtn').addEventListener('click', () => {
     document.getElementById('uploadPreview').classList.add('hidden');
     document.getElementById('fileInput').value = '';
-  });
-  document.getElementById('deleteAllBtn').addEventListener('click', deleteAllFarmers);
     parsedUploadRows = [];
   });
 

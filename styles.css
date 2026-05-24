@@ -386,31 +386,6 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .upload-actions { display: flex; gap: 12px; margin-top: 16px; justify-content: flex-end; }
 .hidden { display: none !important; }
 
-/* Column mapping panel */
-.upload-mapping {
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px;
-}
-.upload-mapping-title {
-  font-size: 0.9rem; font-weight: 600; color: var(--text);
-  margin-bottom: 10px;
-}
-.upload-mapping-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 6px;
-}
-.mapping-item {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 0.78rem; padding: 5px 8px;
-  border-radius: 6px;
-}
-.mapping-ok   { background: #e8f5e9; }
-.mapping-miss { background: #fff3e0; }
-.mapping-field { font-weight: 600; color: var(--text); min-width: 80px; }
-.mapping-arrow { color: var(--text-muted); }
-.mapping-col { color: #065f46; font-family: monospace; font-size: 0.75rem; }
-.mapping-miss .mapping-col { color: #b45309; }
-
 /* ===== INSIGHTS ===== */
 .insights-container { max-width: 900px; }
 .insights-container h2 { margin-bottom: 20px; }
