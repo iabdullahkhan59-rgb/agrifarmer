@@ -39,8 +39,29 @@
 </head>
 <body>
 
+  <!-- ===== LOADING SPLASH (shown while session check runs) ===== -->
+  <div id="loadingSplash" style="
+    position:fixed;inset:0;z-index:2000;
+    background:linear-gradient(135deg,#0a1172 0%,#1b3a8a 50%,#0d47a1 100%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  ">
+    <svg width="56" height="56" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="15" fill="rgba(255,255,255,0.15)"/>
+      <path d="M16 6 C10 6 7 12 9 17 C11 22 16 26 16 26 C16 26 21 22 23 17 C25 12 22 6 16 6Z" fill="rgba(255,255,255,0.7)"/>
+      <circle cx="16" cy="16" r="4" fill="white"/>
+    </svg>
+    <div style="color:#fff;font-size:1.3rem;font-weight:700;letter-spacing:0.5px">AgriTrack</div>
+    <div style="width:36px;height:36px">
+      <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="animation:spin 0.9s linear infinite">
+        <circle cx="18" cy="18" r="15" stroke="rgba(255,255,255,0.2)" stroke-width="3"/>
+        <path d="M18 3 A15 15 0 0 1 33 18" stroke="white" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
   <!-- ===== AUTH SCREEN ===== -->
-  <div id="authScreen" class="auth-screen">
+  <div id="authScreen" class="auth-screen hidden">
     <div class="auth-card">
 
       <!-- Logo -->
@@ -207,7 +228,6 @@
         <div class="topbar-actions">
           <button class="btn btn-outline" id="exportBtn">⬇ Export Excel</button>
           <button class="btn btn-outline" id="exportPdfBtn">📄 Export PDF</button>
-          <button class="btn btn-outline" id="seedDummyBtn" onclick="seedDummyData()">🌱 Add Dummy Data</button>
         </div>
       </header>
 
@@ -385,7 +405,10 @@
         <!-- ADD FARMER PAGE -->
         <section id="page-add-farmer" class="page">
           <div class="form-container">
-            <h2 class="form-title">Farmer Registration</h2>
+            <div class="form-title-row">
+              <h2 class="form-title">Farmer Registration</h2>
+              <button type="button" id="fillDummyBtn" class="btn-dummy-fill" title="Fill with dummy data">🪄</button>
+            </div>
             <form id="farmerForm">
               <input type="hidden" id="editFarmerId" value="" />
 
@@ -517,11 +540,65 @@
             <div class="search-bar">
               <input type="text" id="searchInput" placeholder="🔍 Search by name or contact..." />
             </div>
+            <button class="btn btn-outline btn-sm" id="toggleFiltersBtn" title="Advanced filters">
+              ⚙️ Filters <span class="filter-badge hidden" id="filterBadge">0</span>
+            </button>
+            <button class="btn btn-outline btn-sm" id="clearFiltersBtn" title="Clear all filters" style="display:none">✕ Clear</button>
+          </div>
+
+          <!-- Advanced filter panel -->
+          <div class="adv-filter-panel hidden" id="advFilterPanel">
+            <div class="adv-filter-grid">
+              <div class="adv-filter-group">
+                <label>District</label>
+                <select id="filterDistrict"><option value="">All Districts</option></select>
+              </div>
+              <div class="adv-filter-group">
+                <label>Province</label>
+                <select id="filterProvince">
+                  <option value="">All Provinces</option>
+                  <option value="Punjab">Punjab</option>
+                  <option value="Sindh">Sindh</option>
+                  <option value="KPK">KPK</option>
+                  <option value="Balochistan">Balochistan</option>
+                  <option value="AJK">AJK</option>
+                  <option value="GB">Gilgit-Baltistan</option>
+                </select>
+              </div>
+              <div class="adv-filter-group">
+                <label>Crop</label>
+                <select id="filterCrop"><option value="">All Crops</option></select>
+              </div>
+              <div class="adv-filter-group">
+                <label>Dealer</label>
+                <select id="filterDealer"><option value="">All Dealers</option></select>
+              </div>
+              <div class="adv-filter-group">
+                <label>Date From</label>
+                <input type="date" id="filterDateFrom" />
+              </div>
+              <div class="adv-filter-group">
+                <label>Date To</label>
+                <input type="date" id="filterDateTo" />
+              </div>
+            </div>
+            <div class="adv-filter-footer">
+              <span id="filterResultCount" class="filter-result-count"></span>
+              <button class="btn btn-primary btn-sm" id="applyFiltersBtn">Apply Filters</button>
+              <button class="btn btn-outline btn-sm" id="resetFiltersBtn">Reset</button>
+            </div>
+          </div>
+          <!-- Bulk action bar (hidden until rows are selected) -->
+          <div class="bulk-bar hidden" id="bulkBar">
+            <span id="bulkCount">0 selected</span>
+            <button class="btn btn-danger btn-sm" id="bulkDeleteBtn">🗑️ Delete Selected</button>
+            <button class="btn btn-outline btn-sm" id="bulkClearBtn">✕ Clear</button>
           </div>
           <div class="table-wrapper">
             <table class="data-table" id="farmersTable">
               <thead>
                 <tr>
+                  <th style="width:36px"><input type="checkbox" id="selectAllChk" title="Select all" /></th>
                   <th>#</th>
                   <th>Name</th>
                   <th>Contact</th>

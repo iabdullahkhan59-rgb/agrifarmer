@@ -114,6 +114,7 @@ function formatAuthError(err) {
 // ===== AUTH UI =====
 
 function showAuthScreen(view = 'signin') {
+  hideSplash();
   document.getElementById('app').style.display = 'none';
   const screen = document.getElementById('authScreen');
   screen.classList.remove('hidden');
@@ -223,7 +224,7 @@ function onAuthSuccess() {
   // Load app data
   loadFarmers().then(() => {
     renderDashboard();
-    renderFarmersTable(farmers);
+    if (currentPage === 'farmers') renderFarmersTable(farmers);
   });
 }
 
@@ -231,10 +232,19 @@ function onAuthSuccess() {
 async function initAuth() {
   const hasSession = loadSession();
   if (hasSession) {
+    // Verify token in background — splash stays visible during this
     const valid = await verifySession();
+    hideSplash();
     if (valid) { onAuthSuccess(); return; }
+  } else {
+    hideSplash();
   }
   showAuthScreen('signin');
+}
+
+function hideSplash() {
+  const splash = document.getElementById('loadingSplash');
+  if (splash) splash.style.display = 'none';
 }
 
 // Toggle password visibility

@@ -201,7 +201,7 @@ function navigateTo(page) {
   if (sidebarOverlay) sidebarOverlay.classList.remove('show');
   // Page-specific init
   if (page === 'dashboard') renderDashboard();
-  if (page === 'farmers') renderFarmersTable(farmers);
+  if (page === 'farmers') { applyFilters(); populateFilterDropdowns(); }
   if (page === 'add-farmer') initMap();
   if (page === 'nearby') { initNearbyMap(); }
 }
@@ -297,11 +297,62 @@ function setProductData(products) {
   });
 }
 
+// ===== DUMMY DATA FILL =====
+function fillDummyData() {
+  const names    = ['Muhammad Aslam', 'Ghulam Hussain', 'Abdul Razzaq', 'Tariq Mehmood', 'Zulfiqar Ali', 'Nasir Iqbal', 'Sajid Mahmood', 'Imran Khan', 'Khalid Pervez', 'Bashir Ahmad'];
+  const contacts = ['0300-1234567', '0312-9876543', '0333-4561234', '0345-7890123', '0321-6543210', '0311-2345678', '0301-8765432', '0344-3456789', '0322-5678901', '0313-4321098'];
+  const dealers  = ['Chaudhry Agri Store', 'Al-Madina Fertilizer', 'Pak Kissan Center', 'Green Field Traders', 'Rehman Agri Depot'];
+  const villages = ['Chak 45/WB', 'Chak 12/EB', 'Mauza Khanpur', 'Chak 88/ML', 'Basti Malook'];
+  const tehsils  = ['Vehari', 'Multan', 'Sahiwal', 'Bahawalpur', 'Lodhran'];
+  const districts= ['Vehari', 'Multan', 'Sahiwal', 'Bahawalpur', 'Lodhran'];
+  const provinces= ['Punjab', 'Sindh', 'KPK', 'Balochistan'];
+  const cropSets = [
+    ['Wheat', 'Cotton'], ['Rice', 'Sugarcane'], ['Maize', 'Wheat'],
+    ['Cotton', 'Sunflower'], ['Wheat', 'Potato', 'Vegetables']
+  ];
+  const lats = [30.1234, 29.8765, 30.5432, 31.2345, 29.4567];
+  const lngs = [71.4321, 72.1234, 71.8765, 72.5678, 71.2345];
+
+  const r = i => Math.floor(Math.random() * i);
+  const pick = arr => arr[r(arr.length)];
+
+  document.getElementById('farmerName').value    = pick(names);
+  document.getElementById('contactNumber').value = pick(contacts);
+  document.getElementById('dealerName').value    = pick(dealers);
+  document.getElementById('landArea').value      = (Math.floor(Math.random() * 195) + 5) / 10; // 0.5–20 acres
+  document.getElementById('villageName').value   = pick(villages);
+  document.getElementById('tehsilName').value    = pick(tehsils);
+  document.getElementById('districtName').value  = pick(districts);
+  document.getElementById('provinceName').value  = pick(provinces);
+
+  // Crops
+  setSelectedCrops(pick(cropSets));
+
+  // GPS
+  const li = r(lats.length);
+  const lat = lats[li] + (Math.random() - 0.5) * 0.1;
+  const lng = lngs[li] + (Math.random() - 0.5) * 0.1;
+  document.getElementById('latitude').value  = lat.toFixed(6);
+  document.getElementById('longitude').value = lng.toFixed(6);
+  if (mapInstance) setMapMarker(lat, lng);
+
+  // Fertilizer products — fill 2–3 random products
+  document.querySelectorAll('.product-row .prod-bags').forEach(i => i.value = '');
+  document.querySelectorAll('.product-row .prod-dealer').forEach(i => i.value = '');
+  const shuffled = [...ALL_PRODUCTS].sort(() => Math.random() - 0.5).slice(0, 3);
+  shuffled.forEach(prod => {
+    const bagsInput  = document.querySelector(`.prod-bags[data-id="${prod.id}"]`);
+    const dealerInput = document.querySelector(`.prod-dealer[data-id="${prod.id}"]`);
+    if (bagsInput)  bagsInput.value  = r(10) + 1;
+    if (dealerInput) dealerInput.value = pick(dealers);
+  });
+}
+
 // ===== FORM HANDLING =====
 function resetForm() {
   document.getElementById('farmerForm').reset();
   document.getElementById('editFarmerId').value = '';
-  document.getElementById('submitFormBtn').textContent = '?? Save Farmer';
+  document.getElementById('submitFormBtn').textContent = '💾 Save Farmer';
   document.querySelectorAll('.product-row .prod-bags').forEach(i => i.value = '');
   document.querySelectorAll('.product-row .prod-dealer').forEach(i => i.value = '');
   customCrops = [];
@@ -316,8 +367,8 @@ function renderCustomCropTags() {
   if (!customCrops.length) { container.innerHTML = ''; return; }
   container.innerHTML = customCrops.map((crop, i) => `
     <span class="custom-crop-tag">
-      ?? ${escHtml(crop)}
-      <button type="button" onclick="removeCustomCrop(${i})" title="Remove">?</button>
+      🌱 ${escHtml(crop)}
+      <button type="button" onclick="removeCustomCrop(${i})" title="Remove">✕</button>
     </span>
   `).join('');
 }
@@ -407,38 +458,80 @@ async function handleFormSubmit(e) {
 }
 
 // ===== FARMERS TABLE =====
+let selectedFarmerIds = new Set();
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulkBar');
+  const count = selectedFarmerIds.size;
+  if (count > 0) {
+    bar.classList.remove('hidden');
+    document.getElementById('bulkCount').textContent = count + ' selected';
+  } else {
+    bar.classList.add('hidden');
+  }
+  const allChk = document.getElementById('selectAllChk');
+  if (!allChk) return;
+  const rowChks = document.querySelectorAll('.row-chk');
+  if (rowChks.length && count === rowChks.length) {
+    allChk.checked = true; allChk.indeterminate = false;
+  } else if (count === 0) {
+    allChk.checked = false; allChk.indeterminate = false;
+  } else {
+    allChk.checked = false; allChk.indeterminate = true;
+  }
+}
+
 function renderFarmersTable(data) {
   const tbody = document.getElementById('farmersTableBody');
   if (!data.length) {
     tbody.innerHTML = '<tr><td colspan="11" class="empty-state">No farmers found.</td></tr>';
+    updateBulkBar();
     return;
   }
   tbody.innerHTML = data.map((f, i) => {
-    const villageTehsil = [f.village, f.tehsil].filter(Boolean).join(', ') || '?';
-    const district = f.district || '?';
+    const villageTehsil = [f.village, f.tehsil].filter(Boolean).join(', ') || '\u2014';
+    const district = f.district || '\u2014';
     const crops = (f.crops || []).map(c => `<span class="badge badge-green">${c}</span>`).join('');
-    const date = f.date ? new Date(f.date).toLocaleDateString('en-PK') : '?';
-    return `<tr>
+    const date = f.date ? new Date(f.date).toLocaleDateString('en-PK') : '\u2014';
+    const checked = selectedFarmerIds.has(f.id) ? 'checked' : '';
+    return `<tr class="${selectedFarmerIds.has(f.id) ? 'row-selected' : ''}">
+      <td><input type="checkbox" class="row-chk" data-id="${f.id}" ${checked} /></td>
       <td>${i + 1}</td>
       <td data-label="Name"><strong>${escHtml(f.name)}</strong></td>
       <td data-label="Contact">${escHtml(f.contact)}</td>
       <td data-label="Village/Tehsil" style="font-size:0.82rem">${escHtml(villageTehsil)}</td>
       <td data-label="District" style="font-size:0.82rem">${escHtml(district)}</td>
-      <td data-label="Land (Ac)">${f.landArea || '�'}</td>
+      <td data-label="Land (Ac)">${f.landArea || '\u2014'}</td>
       <td data-label="Crops">${crops}</td>
       <td data-label="Dealer">${escHtml(f.dealer)}</td>
       <td data-label="Date">${date}</td>
       <td data-label="Actions">
         <div class="action-btns">
-          <button class="btn btn-outline btn-sm" onclick="viewFarmer('${f.id}')">?? View</button>
-          <button class="btn btn-outline btn-sm" onclick="editFarmer('${f.id}')">??</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteFarmer('${f.id}')">??</button>
+          <button class="btn btn-outline btn-sm" onclick="viewFarmer('${f.id}')">&#128065; View</button>
+          <button class="btn btn-outline btn-sm" onclick="editFarmer('${f.id}')">&#9999;&#65039;</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteFarmer('${f.id}')">&#128465;&#65039;</button>
         </div>
       </td>
     </tr>`;
   }).join('');
-}
 
+  // Wire row checkboxes
+  document.querySelectorAll('.row-chk').forEach(chk => {
+    chk.addEventListener('change', function() {
+      const id = this.dataset.id;
+      if (this.checked) {
+        selectedFarmerIds.add(id);
+        this.closest('tr').classList.add('row-selected');
+      } else {
+        selectedFarmerIds.delete(id);
+        this.closest('tr').classList.remove('row-selected');
+      }
+      updateBulkBar();
+    });
+  });
+
+  updateBulkBar();
+}
 function escHtml(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -447,10 +540,10 @@ function viewFarmer(id) {
   const f = farmers.find(f => f.id === id);
   if (!f) return;
   const loc = (f.lat && f.lng) ? `${f.lat}, ${f.lng}` : 'Not set';
-  const crops = (f.crops || []).join(', ') || '?';
+  const crops = (f.crops || []).join(', ') || '—';
   const prodRows = (f.products || []).map(p => {
     const unit = p.unit || 'bags';
-    const qtyLabel = unit.charAt(0).toUpperCase() + unit.slice(1); // "Bags" or "Bottles"
+    const qtyLabel = unit.charAt(0).toUpperCase() + unit.slice(1);
     return `<tr><td>${escHtml(p.name)}</td><td>${escHtml(p.brand)}</td><td>${p.bags} ${qtyLabel}</td><td>${escHtml(p.dealer)}</td></tr>`;
   }).join('') || '<tr><td colspan="4" style="text-align:center;color:#999">No products recorded</td></tr>';
   document.getElementById('modalTitle').textContent = f.name;
@@ -459,12 +552,12 @@ function viewFarmer(id) {
     <div class="detail-row"><span class="detail-label">Dealer:</span><span class="detail-value">${escHtml(f.dealer)}</span></div>
     <div class="detail-row"><span class="detail-label">Land Area:</span><span class="detail-value">${f.landArea} Acres</span></div>
     <div class="detail-row"><span class="detail-label">Crops:</span><span class="detail-value">${escHtml(crops)}</span></div>
-    <div class="detail-row"><span class="detail-label">Village / Mauza:</span><span class="detail-value">${escHtml(f.village || '?')}</span></div>
-    <div class="detail-row"><span class="detail-label">Tehsil:</span><span class="detail-value">${escHtml(f.tehsil || '?')}</span></div>
-    <div class="detail-row"><span class="detail-label">District:</span><span class="detail-value">${escHtml(f.district || '?')}</span></div>
-    <div class="detail-row"><span class="detail-label">Province:</span><span class="detail-value">${escHtml(f.province || '?')}</span></div>
+    <div class="detail-row"><span class="detail-label">Village / Mauza:</span><span class="detail-value">${escHtml(f.village || '—')}</span></div>
+    <div class="detail-row"><span class="detail-label">Tehsil:</span><span class="detail-value">${escHtml(f.tehsil || '—')}</span></div>
+    <div class="detail-row"><span class="detail-label">District:</span><span class="detail-value">${escHtml(f.district || '—')}</span></div>
+    <div class="detail-row"><span class="detail-label">Province:</span><span class="detail-value">${escHtml(f.province || '—')}</span></div>
     <div class="detail-row"><span class="detail-label">GPS Location:</span><span class="detail-value">${escHtml(loc)}</span></div>
-    <div class="detail-row"><span class="detail-label">Date Added:</span><span class="detail-value">${f.date ? new Date(f.date).toLocaleString('en-PK') : '?'}</span></div>
+    <div class="detail-row"><span class="detail-label">Date Added:</span><span class="detail-value">${f.date ? new Date(f.date).toLocaleString('en-PK') : '—'}</span></div>
     <h4 style="margin:16px 0 8px;color:#0a1172">Fertilizer Usage</h4>
     <table class="fertilizer-table">
       <thead><tr><th>Product</th><th>Brand</th><th>Quantity</th><th>Dealer</th></tr></thead>
@@ -491,7 +584,7 @@ function editFarmer(id) {
     document.getElementById('longitude').value = f.lng || '';
     setSelectedCrops(f.crops);
     setProductData(f.products);
-    document.getElementById('submitFormBtn').textContent = '?? Update Farmer';
+    document.getElementById('submitFormBtn').textContent = '💾 Update Farmer';
     if (f.lat && f.lng) setMapMarker(f.lat, f.lng);
   }, 100);
 }
@@ -505,14 +598,133 @@ async function deleteFarmer(id) {
   showToast('Farmer deleted.', 'success');
 }
 
-// ===== SEARCH =====
+// ===== SEARCH & ADVANCED FILTERS =====
+let activeFilters = { q: '', district: '', province: '', crop: '', dealer: '', dateFrom: '', dateTo: '' };
+
+function populateFilterDropdowns() {
+  const districts = [...new Set(farmers.map(f => f.district).filter(Boolean))].sort();
+  const dealers   = [...new Set(farmers.map(f => f.dealer).filter(Boolean))].sort();
+  const crops     = [...new Set(farmers.flatMap(f => f.crops || []))].sort();
+
+  const distSel   = document.getElementById('filterDistrict');
+  const dealerSel = document.getElementById('filterDealer');
+  const cropSel   = document.getElementById('filterCrop');
+
+  const prev = { d: distSel.value, dl: dealerSel.value, c: cropSel.value };
+
+  distSel.innerHTML   = '<option value="">All Districts</option>'  + districts.map(v => `<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('');
+  dealerSel.innerHTML = '<option value="">All Dealers</option>'    + dealers.map(v => `<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('');
+  cropSel.innerHTML   = '<option value="">All Crops</option>'      + crops.map(v => `<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('');
+
+  // Restore previous selections
+  distSel.value   = prev.d;
+  dealerSel.value = prev.dl;
+  cropSel.value   = prev.c;
+}
+
+function applyFilters() {
+  const q        = activeFilters.q.toLowerCase();
+  const district = activeFilters.district;
+  const province = activeFilters.province;
+  const crop     = activeFilters.crop;
+  const dealer   = activeFilters.dealer;
+  const dateFrom = activeFilters.dateFrom ? new Date(activeFilters.dateFrom) : null;
+  const dateTo   = activeFilters.dateTo   ? new Date(activeFilters.dateTo + 'T23:59:59') : null;
+
+  const result = farmers.filter(f => {
+    if (q && !f.name.toLowerCase().includes(q) && !f.contact.toLowerCase().includes(q)) return false;
+    if (district && f.district !== district) return false;
+    if (province && f.province !== province) return false;
+    if (crop && !(f.crops || []).includes(crop)) return false;
+    if (dealer && f.dealer !== dealer) return false;
+    if (dateFrom && (!f.date || new Date(f.date) < dateFrom)) return false;
+    if (dateTo   && (!f.date || new Date(f.date) > dateTo))   return false;
+    return true;
+  });
+
+  renderFarmersTable(result);
+
+  // Update result count
+  const total = farmers.length;
+  const shown = result.length;
+  document.getElementById('filterResultCount').textContent =
+    shown === total ? `Showing all ${total} farmers` : `Showing ${shown} of ${total} farmers`;
+
+  // Update badge
+  const activeCount = [district, province, crop, dealer, activeFilters.dateFrom, activeFilters.dateTo].filter(Boolean).length;
+  const badge = document.getElementById('filterBadge');
+  if (activeCount > 0) {
+    badge.textContent = activeCount;
+    badge.classList.remove('hidden');
+    document.getElementById('clearFiltersBtn').style.display = '';
+  } else {
+    badge.classList.add('hidden');
+    document.getElementById('clearFiltersBtn').style.display = 'none';
+  }
+}
+
+function resetFilters() {
+  activeFilters = { q: '', district: '', province: '', crop: '', dealer: '', dateFrom: '', dateTo: '' };
+  document.getElementById('searchInput').value    = '';
+  document.getElementById('filterDistrict').value = '';
+  document.getElementById('filterProvince').value = '';
+  document.getElementById('filterCrop').value     = '';
+  document.getElementById('filterDealer').value   = '';
+  document.getElementById('filterDateFrom').value = '';
+  document.getElementById('filterDateTo').value   = '';
+  applyFilters();
+}
+
 function initSearch() {
+  // Live text search
   document.getElementById('searchInput').addEventListener('input', function() {
-    const q = this.value.toLowerCase();
-    const filtered = farmers.filter(f =>
-      f.name.toLowerCase().includes(q) || f.contact.toLowerCase().includes(q)
-    );
-    renderFarmersTable(filtered);
+    activeFilters.q = this.value.trim();
+    applyFilters();
+  });
+
+  // Toggle filter panel
+  document.getElementById('toggleFiltersBtn').addEventListener('click', function() {
+    const panel = document.getElementById('advFilterPanel');
+    const isHidden = panel.classList.toggle('hidden');
+    this.style.background = isHidden ? '' : 'var(--primary)';
+    this.style.color = isHidden ? '' : '#fff';
+    if (!isHidden) populateFilterDropdowns();
+  });
+
+  // Clear all filters (top bar button)
+  document.getElementById('clearFiltersBtn').addEventListener('click', function() {
+    resetFilters();
+    // Close panel
+    document.getElementById('advFilterPanel').classList.add('hidden');
+    document.getElementById('toggleFiltersBtn').style.background = '';
+    document.getElementById('toggleFiltersBtn').style.color = '';
+  });
+
+  // Apply button
+  document.getElementById('applyFiltersBtn').addEventListener('click', function() {
+    activeFilters.district = document.getElementById('filterDistrict').value;
+    activeFilters.province = document.getElementById('filterProvince').value;
+    activeFilters.crop     = document.getElementById('filterCrop').value;
+    activeFilters.dealer   = document.getElementById('filterDealer').value;
+    activeFilters.dateFrom = document.getElementById('filterDateFrom').value;
+    activeFilters.dateTo   = document.getElementById('filterDateTo').value;
+    applyFilters();
+  });
+
+  // Reset button inside panel
+  document.getElementById('resetFiltersBtn').addEventListener('click', resetFilters);
+
+  // Live filter on dropdown change (no need to click Apply)
+  ['filterDistrict','filterProvince','filterCrop','filterDealer','filterDateFrom','filterDateTo'].forEach(id => {
+    document.getElementById(id).addEventListener('change', function() {
+      activeFilters.district = document.getElementById('filterDistrict').value;
+      activeFilters.province = document.getElementById('filterProvince').value;
+      activeFilters.crop     = document.getElementById('filterCrop').value;
+      activeFilters.dealer   = document.getElementById('filterDealer').value;
+      activeFilters.dateFrom = document.getElementById('filterDateFrom').value;
+      activeFilters.dateTo   = document.getElementById('filterDateTo').value;
+      applyFilters();
+    });
   });
 }
 
@@ -535,7 +747,7 @@ function calcStats(data) {
     brandTotals[p.brand] = (brandTotals[p.brand] || 0) + (p.bags || 0);
   }));
   const topBrand = Object.entries(brandTotals).sort((a,b) => b[1]-a[1])[0];
-  return { totalBags, totalDealers: dealers.size, topBrand: topBrand ? topBrand[0] : '?' };
+  return { totalBags, totalDealers: dealers.size, topBrand: topBrand ? topBrand[0] : '—' };
 }
 
 function destroyChart(id) {
@@ -677,28 +889,28 @@ function runInsights() {
   // Render insight cards
   document.getElementById('insightCards').innerHTML = `
     <div class="insight-card">
-      <div class="ic-icon">?????</div>
+      <div class="ic-icon">👨‍🌾</div>
       <div class="ic-value">${data.length}</div>
       <div class="ic-label">Farmers in Range</div>
     </div>
     <div class="insight-card">
-      <div class="ic-icon">??</div>
+      <div class="ic-icon">🧪</div>
       <div class="ic-value">${totalBags}</div>
       <div class="ic-label">Total Bags Sold</div>
     </div>
     <div class="insight-card">
-      <div class="ic-icon">??</div>
-      <div class="ic-value">${topProd ? topProd[0] : '?'}</div>
+      <div class="ic-icon">🏆</div>
+      <div class="ic-value">${topProd ? topProd[0] : '—'}</div>
       <div class="ic-label">Most Used Product</div>
     </div>
     <div class="insight-card">
-      <div class="ic-icon">??</div>
-      <div class="ic-value">${topBrand ? topBrand[0] : '?'}</div>
+      <div class="ic-icon">⭐</div>
+      <div class="ic-value">${topBrand ? topBrand[0] : '—'}</div>
       <div class="ic-label">Top Brand</div>
     </div>
     <div class="insight-card">
-      <div class="ic-icon">??</div>
-      <div class="ic-value">${topDealer ? topDealer[0] : '?'}</div>
+      <div class="ic-icon">🏪</div>
+      <div class="ic-value">${topDealer ? topDealer[0] : '—'}</div>
       <div class="ic-label">Most Active Dealer</div>
     </div>
   `;
@@ -1038,9 +1250,53 @@ document.addEventListener('DOMContentLoaded', async function() {
   initModal();
   initSearch();
 
+  // Select-all checkbox
+  document.getElementById('selectAllChk').addEventListener('change', function() {
+    const rowChks = document.querySelectorAll('.row-chk');
+    rowChks.forEach(chk => {
+      chk.checked = this.checked;
+      const id = chk.dataset.id;
+      if (this.checked) {
+        selectedFarmerIds.add(id);
+        chk.closest('tr').classList.add('row-selected');
+      } else {
+        selectedFarmerIds.delete(id);
+        chk.closest('tr').classList.remove('row-selected');
+      }
+    });
+    updateBulkBar();
+  });
+
+  // Bulk delete
+  document.getElementById('bulkDeleteBtn').addEventListener('click', async function() {
+    const count = selectedFarmerIds.size;
+    if (!count) return;
+    if (!confirm(`Delete ${count} selected farmer${count > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    const ids = [...selectedFarmerIds];
+    farmers = farmers.filter(f => !ids.includes(f.id));
+    selectedFarmerIds.clear();
+    localStorage.setItem('agritrack_farmers', JSON.stringify(farmers));
+    renderFarmersTable(farmers);
+    renderDashboard();
+    showToast(`${count} farmer${count > 1 ? 's' : ''} deleted.`, 'success');
+    // Delete from DB in parallel
+    await Promise.all(ids.map(id => deleteFarmerFromDB(id)));
+  });
+
+  // Bulk clear selection
+  document.getElementById('bulkClearBtn').addEventListener('click', function() {
+    selectedFarmerIds.clear();
+    document.querySelectorAll('.row-chk').forEach(chk => {
+      chk.checked = false;
+      chk.closest('tr').classList.remove('row-selected');
+    });
+    updateBulkBar();
+  });
+
   // Form submit
   document.getElementById('farmerForm').addEventListener('submit', handleFormSubmit);
   document.getElementById('resetFormBtn').addEventListener('click', resetForm);
+  document.getElementById('fillDummyBtn').addEventListener('click', fillDummyData);
 
   // Detect location
   document.getElementById('detectLocationBtn').addEventListener('click', detectLocation);
@@ -1099,198 +1355,6 @@ window.deleteFarmer = deleteFarmer;
 window.nearbyFlyTo = nearbyFlyTo;
 window.removeCustomCrop = removeCustomCrop;
 
-// ===== DUMMY DATA SEED =====
-async function seedDummyData() {
-  const btn = document.getElementById('seedDummyBtn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Adding...'; }
-
-  const dummyFarmers = [
-    {
-      name: 'Muhammad Aslam',       contact: '0300-1234567', dealer: 'Chaudhry Agri Store',
-      landArea: 12, village: 'Chak 45/WB',  tehsil: 'Vehari',    district: 'Vehari',    province: 'Punjab',
-      crops: ['Wheat', 'Cotton'],
-      lat: 30.0444, lng: 72.3527,
-      products: [
-        { id: 'sona_neem_urea', name: 'Sona Neem Coated Urea', brand: 'Sona (FFC)', bags: 8, dealer: 'Chaudhry Agri Store' },
-        { id: 'sona_boron_dap', name: 'Sona Boron DAP',        brand: 'Sona (FFC)', bags: 5, dealer: 'Chaudhry Agri Store' }
-      ]
-    },
-    {
-      name: 'Allah Ditta',          contact: '0301-2345678', dealer: 'Raza Fertilizer',
-      landArea: 8,  village: 'Chak 12/EB',  tehsil: 'Burewala',  district: 'Vehari',    province: 'Punjab',
-      crops: ['Wheat', 'Sugarcane'],
-      lat: 30.1667, lng: 72.6833,
-      products: [
-        { id: 'engro_generic',  name: 'Engro Product (Generic)',  brand: 'Engro',       bags: 10, dealer: 'Raza Fertilizer' },
-        { id: 'sona_zinc_urea', name: 'Sona Zinc Coated Urea',   brand: 'Sona (FFC)',  bags: 6,  dealer: 'Raza Fertilizer' }
-      ]
-    },
-    {
-      name: 'Ghulam Hussain',       contact: '0302-3456789', dealer: 'Al-Barkat Seeds',
-      landArea: 20, village: 'Mauza Kot Addu', tehsil: 'Kot Addu', district: 'Muzaffargarh', province: 'Punjab',
-      crops: ['Cotton', 'Wheat', 'Maize'],
-      lat: 30.4700, lng: 70.9600,
-      products: [
-        { id: 'fatima_generic', name: 'Sarsabz Product (Generic)', brand: 'Fatima (Sarsabz)', bags: 15, dealer: 'Al-Barkat Seeds' },
-        { id: 'sona_neem_urea', name: 'Sona Neem Coated Urea',    brand: 'Sona (FFC)',        bags: 12, dealer: 'Al-Barkat Seeds' }
-      ]
-    },
-    {
-      name: 'Tariq Mehmood',        contact: '0303-4567890', dealer: 'Green Field Agri',
-      landArea: 6,  village: 'Chak 33/SP',  tehsil: 'Sahiwal',   district: 'Sahiwal',   province: 'Punjab',
-      crops: ['Rice', 'Wheat'],
-      lat: 30.6706, lng: 73.1064,
-      products: [
-        { id: 'yara_tropicote', name: 'YaraLiva Tropicote', brand: 'Yara International', bags: 4, dealer: 'Green Field Agri' }
-      ]
-    },
-    {
-      name: 'Bashir Ahmed',         contact: '0304-5678901', dealer: 'Pak Agro Services',
-      landArea: 15, village: 'Chak 100/NB', tehsil: 'Faisalabad', district: 'Faisalabad', province: 'Punjab',
-      crops: ['Wheat', 'Sunflower', 'Maize'],
-      lat: 31.4180, lng: 73.0790,
-      products: [
-        { id: 'sona_neem_urea', name: 'Sona Neem Coated Urea', brand: 'Sona (FFC)', bags: 20, dealer: 'Pak Agro Services' },
-        { id: 'engro_generic',  name: 'Engro Product (Generic)', brand: 'Engro',     bags: 8,  dealer: 'Pak Agro Services' }
-      ]
-    },
-    {
-      name: 'Zulfiqar Ali',         contact: '0305-6789012', dealer: 'Chaudhry Agri Store',
-      landArea: 10, village: 'Chak 22/WB',  tehsil: 'Vehari',    district: 'Vehari',    province: 'Punjab',
-      crops: ['Cotton', 'Raya'],
-      lat: 30.0200, lng: 72.3900,
-      products: [
-        { id: 'sona_boron_dap', name: 'Sona Boron DAP',      brand: 'Sona (FFC)',        bags: 7,  dealer: 'Chaudhry Agri Store' },
-        { id: 'fatima_generic', name: 'Sarsabz Product (Generic)', brand: 'Fatima (Sarsabz)', bags: 9, dealer: 'Chaudhry Agri Store' }
-      ]
-    },
-    {
-      name: 'Nasir Iqbal',          contact: '0306-7890123', dealer: 'Raza Fertilizer',
-      landArea: 5,  village: 'Mauza Tibba', tehsil: 'Multan',    district: 'Multan',    province: 'Punjab',
-      crops: ['Vegetables', 'Onion', 'Tomato'],
-      lat: 30.1575, lng: 71.5249,
-      products: [
-        { id: 'yara_bortrac',   name: 'YaraVita Bortrac',    brand: 'Yara International', bags: 3, dealer: 'Raza Fertilizer' },
-        { id: 'yara_cropboost', name: 'YaraVita Crop Boost', brand: 'Yara International', bags: 2, dealer: 'Raza Fertilizer' }
-      ]
-    },
-    {
-      name: 'Riaz Hussain',         contact: '0307-8901234', dealer: 'Al-Barkat Seeds',
-      landArea: 18, village: 'Chak 55/EB',  tehsil: 'Okara',     district: 'Okara',     province: 'Punjab',
-      crops: ['Rice', 'Wheat', 'Sugarcane'],
-      lat: 30.8100, lng: 73.4500,
-      products: [
-        { id: 'engro_generic',  name: 'Engro Product (Generic)', brand: 'Engro',      bags: 14, dealer: 'Al-Barkat Seeds' },
-        { id: 'sona_neem_urea', name: 'Sona Neem Coated Urea',  brand: 'Sona (FFC)', bags: 10, dealer: 'Al-Barkat Seeds' }
-      ]
-    },
-    {
-      name: 'Imran Khan',           contact: '0308-9012345', dealer: 'Green Field Agri',
-      landArea: 9,  village: 'Chak 7/SP',   tehsil: 'Pakpattan', district: 'Pakpattan', province: 'Punjab',
-      crops: ['Wheat', 'Cotton'],
-      lat: 30.3400, lng: 73.3900,
-      products: [
-        { id: 'sona_zinc_urea', name: 'Sona Zinc Coated Urea', brand: 'Sona (FFC)', bags: 11, dealer: 'Green Field Agri' }
-      ]
-    },
-    {
-      name: 'Khalid Mahmood',       contact: '0309-0123456', dealer: 'Pak Agro Services',
-      landArea: 25, village: 'Mauza Garh',  tehsil: 'Jhang',     district: 'Jhang',     province: 'Punjab',
-      crops: ['Wheat', 'Maize', 'Sunflower'],
-      lat: 31.2700, lng: 72.3200,
-      products: [
-        { id: 'fatima_generic', name: 'Sarsabz Product (Generic)', brand: 'Fatima (Sarsabz)', bags: 18, dealer: 'Pak Agro Services' },
-        { id: 'yara_tropicote', name: 'YaraLiva Tropicote',        brand: 'Yara International', bags: 6, dealer: 'Pak Agro Services' }
-      ]
-    },
-    {
-      name: 'Shahid Nawaz',         contact: '0310-1234567', dealer: 'Chaudhry Agri Store',
-      landArea: 7,  village: 'Chak 88/WB',  tehsil: 'Lodhran',   district: 'Lodhran',   province: 'Punjab',
-      crops: ['Cotton', 'Wheat'],
-      lat: 29.5300, lng: 71.6300,
-      products: [
-        { id: 'sona_neem_urea', name: 'Sona Neem Coated Urea', brand: 'Sona (FFC)', bags: 9, dealer: 'Chaudhry Agri Store' }
-      ]
-    },
-    {
-      name: 'Abdul Rehman',         contact: '0311-2345678', dealer: 'Raza Fertilizer',
-      landArea: 14, village: 'Mauza Khanpur', tehsil: 'Rahim Yar Khan', district: 'Rahim Yar Khan', province: 'Punjab',
-      crops: ['Sugarcane', 'Wheat', 'Cotton'],
-      lat: 28.4200, lng: 70.2900,
-      products: [
-        { id: 'engro_generic',  name: 'Engro Product (Generic)',   brand: 'Engro',            bags: 16, dealer: 'Raza Fertilizer' },
-        { id: 'sona_boron_dap', name: 'Sona Boron DAP',           brand: 'Sona (FFC)',        bags: 8,  dealer: 'Raza Fertilizer' }
-      ]
-    },
-    {
-      name: 'Pervez Akhtar',        contact: '0312-3456789', dealer: 'Al-Barkat Seeds',
-      landArea: 11, village: 'Chak 60/NB',  tehsil: 'Sargodha',  district: 'Sargodha',  province: 'Punjab',
-      crops: ['Wheat', 'Rice', 'Fruits'],
-      lat: 32.0836, lng: 72.6711,
-      products: [
-        { id: 'yara_frutrel',   name: 'YaraVita Frutrel',   brand: 'Yara International', bags: 5, dealer: 'Al-Barkat Seeds' },
-        { id: 'yara_solatrel',  name: 'YaraVita Solatrel',  brand: 'Yara International', bags: 4, dealer: 'Al-Barkat Seeds' }
-      ]
-    },
-    {
-      name: 'Sajid Hussain',        contact: '0313-4567890', dealer: 'Green Field Agri',
-      landArea: 3,  village: 'Mauza Daska',  tehsil: 'Daska',     district: 'Sialkot',   province: 'Punjab',
-      crops: ['Potato', 'Vegetables', 'Garlic'],
-      lat: 32.3300, lng: 74.3500,
-      products: [
-        { id: 'yara_amplix',    name: 'Yara Amplix Optitrac (Biostimulant)', brand: 'Yara International', bags: 2, dealer: 'Green Field Agri' },
-        { id: 'fatima_generic', name: 'Sarsabz Product (Generic)',           brand: 'Fatima (Sarsabz)',   bags: 3, dealer: 'Green Field Agri' }
-      ]
-    },
-    {
-      name: 'Mushtaq Ahmed',        contact: '0314-5678901', dealer: 'Pak Agro Services',
-      landArea: 16, village: 'Chak 200/RB', tehsil: 'Bahawalpur', district: 'Bahawalpur', province: 'Punjab',
-      crops: ['Cotton', 'Wheat', 'Chilli'],
-      lat: 29.3956, lng: 71.6836,
-      products: [
-        { id: 'sona_neem_urea', name: 'Sona Neem Coated Urea',    brand: 'Sona (FFC)',        bags: 22, dealer: 'Pak Agro Services' },
-        { id: 'sona_zinc_urea', name: 'Sona Zinc Coated Urea',    brand: 'Sona (FFC)',        bags: 10, dealer: 'Pak Agro Services' },
-        { id: 'engro_generic',  name: 'Engro Product (Generic)',   brand: 'Engro',             bags: 7,  dealer: 'Pak Agro Services' }
-      ]
-    }
-  ];
-
-  // Spread dates over the last 6 months
-  const now = Date.now();
-  const sixMonths = 180 * 24 * 60 * 60 * 1000;
-
-  let added = 0;
-  for (let i = 0; i < dummyFarmers.length; i++) {
-    const d = dummyFarmers[i];
-    const farmer = {
-      id: 'dummy_' + Date.now() + '_' + i,
-      name: d.name,
-      contact: d.contact,
-      dealer: d.dealer,
-      landArea: d.landArea,
-      crops: d.crops,
-      village: d.village,
-      tehsil: d.tehsil,
-      district: d.district,
-      province: d.province,
-      lat: d.lat,
-      lng: d.lng,
-      products: d.products,
-      date: new Date(now - sixMonths + (i * (sixMonths / dummyFarmers.length))).toISOString()
-    };
-    farmers.push(farmer);
-    await saveFarmer(farmer);
-    added++;
-  }
-
-  renderFarmersTable(farmers);
-  renderDashboard();
-  showToast(added + ' dummy farmers added successfully!', 'success');
-  if (btn) { btn.disabled = false; btn.textContent = '🌱 Add Dummy Data'; }
-  navigateTo('farmers');
-}
-window.seedDummyData = seedDummyData;
-
 // ===== NEARBY FARMERS =====
 let nearbyMapInstance = null;
 let nearbyUserMarker = null;
@@ -1340,13 +1404,13 @@ function setNearbyUserLocation(lat, lng, source) {
   } else {
     nearbyUserMarker = L.marker([lat, lng], { icon: youIcon, zIndexOffset: 1000 })
       .addTo(nearbyMapInstance)
-      .bindPopup('<strong>?? You are here</strong><br>' + lat.toFixed(5) + ', ' + lng.toFixed(5));
+      .bindPopup('<strong>📍 You are here</strong><br>' + lat.toFixed(5) + ', ' + lng.toFixed(5));
   }
   nearbyUserMarker.openPopup();
 
   const msg = source === 'gps'
-    ? '?? GPS location detected ? showing farmers nearby'
-    : '?? Location set from map tap ? showing farmers nearby';
+    ? '✅ GPS location detected — showing farmers nearby'
+    : '📍 Location set from map tap — showing farmers nearby';
   setNearbyStatus(msg, 'info');
 
   runNearbySearch();
@@ -1380,7 +1444,7 @@ function runNearbySearch() {
   // Filter farmers that have coordinates
   const withCoords = farmers.filter(f => f.lat && f.lng);
   if (!withCoords.length) {
-    setNearbyStatus('?? No farmers have location data saved yet. Add coordinates when registering farmers.', 'none');
+    setNearbyStatus('ℹ️ No farmers have location data saved yet. Add coordinates when registering farmers.', 'none');
     document.getElementById('nearbyResults').classList.add('hidden');
     nearbyMapInstance.setView([nearbyUserLat, nearbyUserLng], 11);
     return;
@@ -1408,18 +1472,18 @@ function runNearbySearch() {
       iconSize: [14, 14],
       iconAnchor: [7, 7]
     });
-    const crops = (f.crops || []).join(', ') || '?';
+    const crops = (f.crops || []).join(', ') || '—';
     const totalBags = (f.products || []).reduce((s, p) => s + (p.bags || 0), 0);
     const addrLine = [f.village, f.tehsil, f.district].filter(Boolean).join(', ') || '';
     const popup = `
       <div style="min-width:160px">
-        <strong style="font-size:0.95rem">????? ${escHtml(f.name)}</strong><br>
-        <span style="color:#555;font-size:0.82rem">?? ${escHtml(f.contact)}</span><br>
-        ${addrLine ? `<span style="color:#555;font-size:0.82rem">?? ${escHtml(addrLine)}</span><br>` : ''}
-        <span style="color:#555;font-size:0.82rem">?? ${escHtml(crops)}</span><br>
-        <span style="color:#555;font-size:0.82rem">?? ${totalBags} bags total</span><br>
+        <strong style="font-size:0.95rem">👨‍🌾 ${escHtml(f.name)}</strong><br>
+        <span style="color:#555;font-size:0.82rem">📞 ${escHtml(f.contact)}</span><br>
+        ${addrLine ? `<span style="color:#555;font-size:0.82rem">📍 ${escHtml(addrLine)}</span><br>` : ''}
+        <span style="color:#555;font-size:0.82rem">🌾 ${escHtml(crops)}</span><br>
+        <span style="color:#555;font-size:0.82rem">🧪 ${totalBags} bags total</span><br>
         <span style="color:${isNear ? '#0a1172' : '#9e9e9e'};font-weight:600;font-size:0.85rem">
-          ?? ${f.distKm.toFixed(2)} km away
+          📏 ${f.distKm.toFixed(2)} km away
         </span>
       </div>`;
     const marker = L.marker([parseFloat(f.lat), parseFloat(f.lng)], { icon: farmerIcon })
@@ -1439,9 +1503,9 @@ function runNearbySearch() {
 
   // Update status
   if (nearby.length) {
-    setNearbyStatus(`? Found ${nearby.length} farmer${nearby.length > 1 ? 's' : ''} within ${radius} km`, 'found');
+    setNearbyStatus(`✅ Found ${nearby.length} farmer${nearby.length > 1 ? 's' : ''} within ${radius} km`, 'found');
   } else {
-    setNearbyStatus(`?? No farmers found within ${radius} km. Try increasing the radius.`, 'none');
+    setNearbyStatus(`🔍 No farmers found within ${radius} km. Try increasing the radius.`, 'none');
   }
 
   // Render results list
@@ -1464,7 +1528,7 @@ function renderNearbyList(nearby, radius) {
 
   listEl.innerHTML = nearby.map((f, i) => {
     const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other';
-    const crops = (f.crops || []).slice(0, 2).join(', ') + ((f.crops || []).length > 2 ? '?' : '');
+    const crops = (f.crops || []).slice(0, 2).join(', ') + ((f.crops || []).length > 2 ? '…' : '');
     const totalBags = (f.products || []).reduce((s, p) => s + (p.bags || 0), 0);
     const addrShort = [f.village, f.district].filter(Boolean).join(', ') || '';
     const distDisplay = f.distKm < 1
@@ -1474,20 +1538,20 @@ function renderNearbyList(nearby, radius) {
       <div class="nearby-item" onclick="nearbyFlyTo('${f.id}')">
         <div class="nearby-rank ${rankClass}">${i + 1}</div>
         <div class="nearby-info">
-          <div class="nearby-name">????? ${escHtml(f.name)}</div>
+          <div class="nearby-name">👨‍🌾 ${escHtml(f.name)}</div>
           <div class="nearby-meta">
-            ?? ${escHtml(f.contact)} &nbsp;?&nbsp;
-            ${addrShort ? `?? ${escHtml(addrShort)} &nbsp;?&nbsp;` : ''}
-            ?? ${escHtml(crops) || '?'} &nbsp;?&nbsp;
-            ?? ${totalBags} bags &nbsp;?&nbsp;
-            ?? ${escHtml(f.dealer)}
+            📞 ${escHtml(f.contact)} &nbsp;·&nbsp;
+            ${addrShort ? `📍 ${escHtml(addrShort)} &nbsp;·&nbsp;` : ''}
+            🌾 ${escHtml(crops) || '—'} &nbsp;·&nbsp;
+            🧪 ${totalBags} bags &nbsp;·&nbsp;
+            🏪 ${escHtml(f.dealer)}
           </div>
         </div>
         <div class="nearby-dist">
           <span class="nearby-dist-value">${distDisplay}</span>
           <span class="nearby-dist-label">away</span>
         </div>
-        <button class="nearby-action-btn" onclick="event.stopPropagation(); viewFarmer('${f.id}')">?? View</button>
+        <button class="nearby-action-btn" onclick="event.stopPropagation(); viewFarmer('${f.id}')">👁 View</button>
       </div>`;
   }).join('');
 
@@ -1508,7 +1572,7 @@ function nearbyFlyTo(farmerId) {
 
 function nearbyDetectGPS() {
   if (!navigator.geolocation) { showToast('Geolocation not supported by your browser', 'error'); return; }
-  setNearbyStatus('?? Detecting your GPS location?', 'info');
+  setNearbyStatus('📡 Detecting your GPS location…', 'info');
   document.getElementById('nearbyStatus').classList.remove('hidden');
   navigator.geolocation.getCurrentPosition(
     pos => {

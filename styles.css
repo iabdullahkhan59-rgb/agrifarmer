@@ -277,6 +277,16 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   padding: 28px; box-shadow: var(--shadow); border: 1px solid var(--border);
 }
 .form-title { font-size: 1.3rem; font-weight: 700; color: var(--primary-dark); margin-bottom: 24px; }
+.form-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.form-title-row .form-title { margin-bottom: 0; }
+.btn-dummy-fill {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  border: none; border-radius: 50%; width: 38px; height: 38px;
+  font-size: 1.2rem; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; box-shadow: 0 2px 8px rgba(124,58,237,0.35);
+  transition: transform 0.15s, box-shadow 0.15s; flex-shrink: 0;
+}
+.btn-dummy-fill:hover { transform: scale(1.12) rotate(15deg); box-shadow: 0 4px 14px rgba(124,58,237,0.5); }
 .form-section { margin-bottom: 28px; }
 .section-title {
   font-size: 1rem; font-weight: 600; color: var(--primary);
@@ -345,7 +355,64 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .form-actions { display: flex; gap: 12px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid var(--border); }
 
 /* ===== FARMERS LIST ===== */
-.list-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+.list-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+
+/* Advanced filter panel */
+.adv-filter-panel {
+  background: #f8f9ff; border: 1.5px solid #dde3f8;
+  border-radius: 10px; padding: 16px 18px 12px;
+  margin-bottom: 14px; animation: fadeSlideDown 0.18s ease;
+}
+.adv-filter-panel.hidden { display: none; }
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.adv-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px 14px;
+  margin-bottom: 12px;
+}
+.adv-filter-group { display: flex; flex-direction: column; gap: 4px; }
+.adv-filter-group label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.adv-filter-group select,
+.adv-filter-group input[type="date"] {
+  padding: 7px 10px; border: 1.5px solid var(--border);
+  border-radius: 7px; font-size: 0.88rem; background: #fff;
+  color: var(--text); outline: none; transition: border-color 0.15s;
+}
+.adv-filter-group select:focus,
+.adv-filter-group input[type="date"]:focus { border-color: var(--primary); }
+.adv-filter-footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.filter-result-count { flex: 1; font-size: 0.82rem; color: var(--text-muted); font-style: italic; }
+.filter-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--primary); color: #fff;
+  border-radius: 50%; width: 18px; height: 18px;
+  font-size: 0.7rem; font-weight: 700; margin-left: 4px;
+}
+.filter-badge.hidden { display: none; }
+
+/* Bulk action bar */
+.bulk-bar {
+  display: flex; align-items: center; gap: 10px;
+  background: #fff3cd; border: 1px solid #ffc107;
+  border-radius: 8px; padding: 8px 14px; margin-bottom: 12px;
+  font-size: 0.88rem; font-weight: 600; color: #7a5200;
+  flex-wrap: wrap;
+}
+.bulk-bar.hidden { display: none; }
+#bulkCount { flex: 1; }
+
+/* Selected row highlight */
+tr.row-selected { background: #eef2ff !important; }
+tr.row-selected td { border-color: #c7d2fe; }
+
+/* Checkbox column */
+.data-table th:first-child,
+.data-table td:first-child { width: 36px; text-align: center; padding: 0 6px; }
+.row-chk, #selectAllChk { width: 16px; height: 16px; cursor: pointer; accent-color: #0a1172; }
 .search-bar { flex: 1; }
 .search-bar input {
   width: 100%; max-width: 400px; padding: 9px 14px;
@@ -735,7 +802,9 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 
   /* Search bar */
   .search-bar input { max-width: 100%; font-size: 16px; }
-  .list-header { flex-direction: column; align-items: stretch; gap: 10px; }
+  .list-header { flex-direction: row; align-items: center; gap: 8px; }
+  .adv-filter-grid { grid-template-columns: 1fr 1fr; }
+  .adv-filter-footer { flex-direction: row; }
 
   /* Upload */
   .upload-container { padding: 0; }
@@ -839,6 +908,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   min-height: 100vh;
   overflow-y: auto;
 }
+.auth-screen.hidden { display: none; }
 
 .auth-card {
   background: #fff;
@@ -878,8 +948,6 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .auth-title {
   font-size: 1.05rem; font-weight: 700;
   color: var(--text); margin-bottom: 16px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid var(--border);
 }
 .auth-sub {
   font-size: 0.85rem; color: var(--text-muted);
@@ -995,7 +1063,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   .auth-logo-wrap { width: 60px; height: 60px; margin-bottom: 8px; }
   .auth-brand { font-size: 1.2rem; }
   .auth-tagline { margin-bottom: 12px; font-size: 0.72rem; }
-  .auth-title { margin-bottom: 12px; padding-bottom: 8px; }
+  .auth-title { margin-bottom: 12px; }
   .auth-field { margin-bottom: 9px; }
   .auth-field input { padding: 8px 10px; font-size: 0.9rem; }
   .auth-btn { padding: 10px; }
