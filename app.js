@@ -1,10 +1,10 @@
-﻿// ============================================================
+// ============================================================
 // AgriTrack - Agricultural Data Management System
 // Data stored in db (with localStorage as local cache)
 // ============================================================
 
 // ===== SUPABASE CONFIG =====
-// NOTE: This is the public anon key — safe for frontend use.
+// NOTE: This is the public anon key � safe for frontend use.
 // Real security is enforced by Supabase Row Level Security (RLS) policies.
 // Do NOT replace this with your service_role key.
 const SUPABASE_URL = 'https://jnnbtvgobqzdqyafxxvp.supabase.co';
@@ -76,7 +76,6 @@ function farmerToRow(f) {
     tehsil: f.tehsil || null,
     district: f.district || null,
     province: f.province || null,
-    full_address: f.fullAddress || null,
     lat: f.lat || null,
     lng: f.lng || null,
     products: f.products || [],
@@ -98,7 +97,6 @@ function rowToFarmer(r) {
     tehsil: r.tehsil || '',
     district: r.district || '',
     province: r.province || '',
-    fullAddress: r.full_address || '',
     lat: r.lat,
     lng: r.lng,
     products: r.products || [],
@@ -236,7 +234,7 @@ function initMap() {
   const defaultLat = 30.3753, defaultLng = 69.3451; // Pakistan center
   mapInstance = L.map('mapPicker').setView([defaultLat, defaultLng], 6);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '� OpenStreetMap contributors'
+    attribution: '? OpenStreetMap contributors'
   }).addTo(mapInstance);
   mapInstance.on('click', function(e) {
     const { lat, lng } = e.latlng;
@@ -387,7 +385,6 @@ async function handleFormSubmit(e) {
     tehsil: document.getElementById('tehsilName').value.trim(),
     district: document.getElementById('districtName').value.trim(),
     province: document.getElementById('provinceName').value,
-    fullAddress: document.getElementById('fullAddress').value.trim(),
     lat: parseFloat(document.getElementById('latitude').value) || null,
     lng: parseFloat(document.getElementById('longitude').value) || null,
     products: getProductData(),
@@ -401,7 +398,7 @@ async function handleFormSubmit(e) {
   }
   const submitBtn = document.getElementById('submitFormBtn');
   submitBtn.disabled = true;
-  submitBtn.textContent = '? Saving�';
+  submitBtn.textContent = '? Saving?';
   await saveFarmer(farmer);
   submitBtn.disabled = false;
   showToast(editId ? 'Farmer record updated!' : 'Farmer saved successfully!', 'success');
@@ -417,27 +414,25 @@ function renderFarmersTable(data) {
     return;
   }
   tbody.innerHTML = data.map((f, i) => {
-    const villageTehsil = [f.village, f.tehsil].filter(Boolean).join(', ') || '�';
-    const district = f.district || '�';
-    const addrShort = f.fullAddress ? (f.fullAddress.length > 30 ? f.fullAddress.slice(0,30) + '�' : f.fullAddress) : '�';
+    const villageTehsil = [f.village, f.tehsil].filter(Boolean).join(', ') || '?';
+    const district = f.district || '?';
     const crops = (f.crops || []).map(c => `<span class="badge badge-green">${c}</span>`).join('');
-    const date = f.date ? new Date(f.date).toLocaleDateString('en-PK') : '�';
+    const date = f.date ? new Date(f.date).toLocaleDateString('en-PK') : '?';
     return `<tr>
       <td>${i + 1}</td>
       <td data-label="Name"><strong>${escHtml(f.name)}</strong></td>
       <td data-label="Contact">${escHtml(f.contact)}</td>
       <td data-label="Village/Tehsil" style="font-size:0.82rem">${escHtml(villageTehsil)}</td>
       <td data-label="District" style="font-size:0.82rem">${escHtml(district)}</td>
-      <td data-label="Address" style="font-size:0.8rem;max-width:160px" title="${escHtml(f.fullAddress||'')}">${escHtml(addrShort)}</td>
-      <td data-label="Land (Ac)">${f.landArea || '—'}</td>
+      <td data-label="Land (Ac)">${f.landArea || '�'}</td>
       <td data-label="Crops">${crops}</td>
       <td data-label="Dealer">${escHtml(f.dealer)}</td>
       <td data-label="Date">${date}</td>
       <td data-label="Actions">
         <div class="action-btns">
-          <button class="btn btn-outline btn-sm" onclick="viewFarmer('${f.id}')">👁 View</button>
-          <button class="btn btn-outline btn-sm" onclick="editFarmer('${f.id}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteFarmer('${f.id}')">🗑</button>
+          <button class="btn btn-outline btn-sm" onclick="viewFarmer('${f.id}')">?? View</button>
+          <button class="btn btn-outline btn-sm" onclick="editFarmer('${f.id}')">??</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteFarmer('${f.id}')">??</button>
         </div>
       </td>
     </tr>`;
@@ -452,7 +447,7 @@ function viewFarmer(id) {
   const f = farmers.find(f => f.id === id);
   if (!f) return;
   const loc = (f.lat && f.lng) ? `${f.lat}, ${f.lng}` : 'Not set';
-  const crops = (f.crops || []).join(', ') || '�';
+  const crops = (f.crops || []).join(', ') || '?';
   const prodRows = (f.products || []).map(p => {
     const unit = p.unit || 'bags';
     const qtyLabel = unit.charAt(0).toUpperCase() + unit.slice(1); // "Bags" or "Bottles"
@@ -464,13 +459,12 @@ function viewFarmer(id) {
     <div class="detail-row"><span class="detail-label">Dealer:</span><span class="detail-value">${escHtml(f.dealer)}</span></div>
     <div class="detail-row"><span class="detail-label">Land Area:</span><span class="detail-value">${f.landArea} Acres</span></div>
     <div class="detail-row"><span class="detail-label">Crops:</span><span class="detail-value">${escHtml(crops)}</span></div>
-    <div class="detail-row"><span class="detail-label">Village / Mauza:</span><span class="detail-value">${escHtml(f.village || '�')}</span></div>
-    <div class="detail-row"><span class="detail-label">Tehsil:</span><span class="detail-value">${escHtml(f.tehsil || '�')}</span></div>
-    <div class="detail-row"><span class="detail-label">District:</span><span class="detail-value">${escHtml(f.district || '�')}</span></div>
-    <div class="detail-row"><span class="detail-label">Province:</span><span class="detail-value">${escHtml(f.province || '�')}</span></div>
-    <div class="detail-row"><span class="detail-label">Full Address:</span><span class="detail-value">${escHtml(f.fullAddress || '�')}</span></div>
+    <div class="detail-row"><span class="detail-label">Village / Mauza:</span><span class="detail-value">${escHtml(f.village || '?')}</span></div>
+    <div class="detail-row"><span class="detail-label">Tehsil:</span><span class="detail-value">${escHtml(f.tehsil || '?')}</span></div>
+    <div class="detail-row"><span class="detail-label">District:</span><span class="detail-value">${escHtml(f.district || '?')}</span></div>
+    <div class="detail-row"><span class="detail-label">Province:</span><span class="detail-value">${escHtml(f.province || '?')}</span></div>
     <div class="detail-row"><span class="detail-label">GPS Location:</span><span class="detail-value">${escHtml(loc)}</span></div>
-    <div class="detail-row"><span class="detail-label">Date Added:</span><span class="detail-value">${f.date ? new Date(f.date).toLocaleString('en-PK') : '�'}</span></div>
+    <div class="detail-row"><span class="detail-label">Date Added:</span><span class="detail-value">${f.date ? new Date(f.date).toLocaleString('en-PK') : '?'}</span></div>
     <h4 style="margin:16px 0 8px;color:#0a1172">Fertilizer Usage</h4>
     <table class="fertilizer-table">
       <thead><tr><th>Product</th><th>Brand</th><th>Quantity</th><th>Dealer</th></tr></thead>
@@ -493,7 +487,6 @@ function editFarmer(id) {
     document.getElementById('tehsilName').value = f.tehsil || '';
     document.getElementById('districtName').value = f.district || '';
     document.getElementById('provinceName').value = f.province || '';
-    document.getElementById('fullAddress').value = f.fullAddress || '';
     document.getElementById('latitude').value = f.lat || '';
     document.getElementById('longitude').value = f.lng || '';
     setSelectedCrops(f.crops);
@@ -542,7 +535,7 @@ function calcStats(data) {
     brandTotals[p.brand] = (brandTotals[p.brand] || 0) + (p.bags || 0);
   }));
   const topBrand = Object.entries(brandTotals).sort((a,b) => b[1]-a[1])[0];
-  return { totalBags, totalDealers: dealers.size, topBrand: topBrand ? topBrand[0] : '�' };
+  return { totalBags, totalDealers: dealers.size, topBrand: topBrand ? topBrand[0] : '?' };
 }
 
 function destroyChart(id) {
@@ -695,17 +688,17 @@ function runInsights() {
     </div>
     <div class="insight-card">
       <div class="ic-icon">??</div>
-      <div class="ic-value">${topProd ? topProd[0] : '�'}</div>
+      <div class="ic-value">${topProd ? topProd[0] : '?'}</div>
       <div class="ic-label">Most Used Product</div>
     </div>
     <div class="insight-card">
       <div class="ic-icon">??</div>
-      <div class="ic-value">${topBrand ? topBrand[0] : '�'}</div>
+      <div class="ic-value">${topBrand ? topBrand[0] : '?'}</div>
       <div class="ic-label">Top Brand</div>
     </div>
     <div class="insight-card">
       <div class="ic-icon">??</div>
-      <div class="ic-value">${topDealer ? topDealer[0] : '�'}</div>
+      <div class="ic-value">${topDealer ? topDealer[0] : '?'}</div>
       <div class="ic-label">Most Active Dealer</div>
     </div>
   `;
@@ -806,12 +799,11 @@ async function importUploadedData() {
     const tehsil = get(['tehsil']);
     const district = get(['district']);
     const province = get(['province']);
-    const fullAddress = get(['fulladdress','address']);
     if (!name) return; // skip rows without a name
     const farmer = {
       id: 'f_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
       name, contact, dealer, landArea, crops,
-      village, tehsil, district, province, fullAddress,
+      village, tehsil, district, province,
       lat, lng,
       products: [],
       date: new Date().toISOString()
@@ -821,7 +813,7 @@ async function importUploadedData() {
   });
   const confirmBtn = document.getElementById('confirmUploadBtn');
   confirmBtn.disabled = true;
-  confirmBtn.textContent = '? Syncing�';
+  confirmBtn.textContent = '? Syncing?';
   await saveFarmers();
   confirmBtn.disabled = false;
   confirmBtn.textContent = '? Import All Records';
@@ -844,7 +836,6 @@ function exportToExcel() {
       'Tehsil': f.tehsil || '',
       'District': f.district || '',
       'Province': f.province || '',
-      'Full Address': f.fullAddress || '',
       'Land Area (Acres)': f.landArea,
       'Crops': (f.crops || []).join(', '),
       'Latitude': f.lat || '',
@@ -951,7 +942,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Initial dashboard render (empty state)
   renderDashboard();
 
-  // Auth handles data loading — initAuth() called from auth.js after DOM ready
+  // Auth handles data loading � initAuth() called from auth.js after DOM ready
 });
 
 // Make functions global for inline onclick handlers
@@ -969,7 +960,7 @@ let nearbyCircle = null;
 let nearbyUserLat = null;
 let nearbyUserLng = null;
 
-// Haversine formula � returns distance in km between two lat/lng points
+// Haversine formula ? returns distance in km between two lat/lng points
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -985,7 +976,7 @@ function initNearbyMap() {
   // Default center: Vehari, Punjab, Pakistan
   nearbyMapInstance = L.map('nearbyMap').setView([30.0444, 72.3512], 10);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '� OpenStreetMap contributors'
+    attribution: '? OpenStreetMap contributors'
   }).addTo(nearbyMapInstance);
 
   // Tap on map to set "you are here"
@@ -1015,8 +1006,8 @@ function setNearbyUserLocation(lat, lng, source) {
   nearbyUserMarker.openPopup();
 
   const msg = source === 'gps'
-    ? '?? GPS location detected � showing farmers nearby'
-    : '?? Location set from map tap � showing farmers nearby';
+    ? '?? GPS location detected ? showing farmers nearby'
+    : '?? Location set from map tap ? showing farmers nearby';
   setNearbyStatus(msg, 'info');
 
   runNearbySearch();
@@ -1078,9 +1069,9 @@ function runNearbySearch() {
       iconSize: [14, 14],
       iconAnchor: [7, 7]
     });
-    const crops = (f.crops || []).join(', ') || '�';
+    const crops = (f.crops || []).join(', ') || '?';
     const totalBags = (f.products || []).reduce((s, p) => s + (p.bags || 0), 0);
-    const addrLine = [f.village, f.tehsil, f.district].filter(Boolean).join(', ') || (f.fullAddress || '');
+    const addrLine = [f.village, f.tehsil, f.district].filter(Boolean).join(', ') || '';
     const popup = `
       <div style="min-width:160px">
         <strong style="font-size:0.95rem">????? ${escHtml(f.name)}</strong><br>
@@ -1134,9 +1125,9 @@ function renderNearbyList(nearby, radius) {
 
   listEl.innerHTML = nearby.map((f, i) => {
     const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other';
-    const crops = (f.crops || []).slice(0, 2).join(', ') + ((f.crops || []).length > 2 ? '�' : '');
+    const crops = (f.crops || []).slice(0, 2).join(', ') + ((f.crops || []).length > 2 ? '?' : '');
     const totalBags = (f.products || []).reduce((s, p) => s + (p.bags || 0), 0);
-    const addrShort = [f.village, f.district].filter(Boolean).join(', ') || f.fullAddress || '';
+    const addrShort = [f.village, f.district].filter(Boolean).join(', ') || '';
     const distDisplay = f.distKm < 1
       ? (f.distKm * 1000).toFixed(0) + ' m'
       : f.distKm.toFixed(2) + ' km';
@@ -1146,10 +1137,10 @@ function renderNearbyList(nearby, radius) {
         <div class="nearby-info">
           <div class="nearby-name">????? ${escHtml(f.name)}</div>
           <div class="nearby-meta">
-            ?? ${escHtml(f.contact)} &nbsp;�&nbsp;
-            ${addrShort ? `?? ${escHtml(addrShort)} &nbsp;�&nbsp;` : ''}
-            ?? ${escHtml(crops) || '�'} &nbsp;�&nbsp;
-            ?? ${totalBags} bags &nbsp;�&nbsp;
+            ?? ${escHtml(f.contact)} &nbsp;?&nbsp;
+            ${addrShort ? `?? ${escHtml(addrShort)} &nbsp;?&nbsp;` : ''}
+            ?? ${escHtml(crops) || '?'} &nbsp;?&nbsp;
+            ?? ${totalBags} bags &nbsp;?&nbsp;
             ?? ${escHtml(f.dealer)}
           </div>
         </div>
@@ -1178,7 +1169,7 @@ function nearbyFlyTo(farmerId) {
 
 function nearbyDetectGPS() {
   if (!navigator.geolocation) { showToast('Geolocation not supported by your browser', 'error'); return; }
-  setNearbyStatus('?? Detecting your GPS location�', 'info');
+  setNearbyStatus('?? Detecting your GPS location?', 'info');
   document.getElementById('nearbyStatus').classList.remove('hidden');
   navigator.geolocation.getCurrentPosition(
     pos => {
