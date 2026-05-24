@@ -1287,6 +1287,7 @@ async function seedDummyData() {
   renderDashboard();
   showToast(added + ' dummy farmers added successfully!', 'success');
   if (btn) { btn.disabled = false; btn.textContent = '🌱 Add Dummy Data'; }
+  navigateTo('farmers');
 }
 window.seedDummyData = seedDummyData;
 

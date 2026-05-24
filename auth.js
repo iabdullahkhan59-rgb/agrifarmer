@@ -223,7 +223,7 @@ function onAuthSuccess() {
   // Load app data
   loadFarmers().then(() => {
     renderDashboard();
-    if (currentPage === 'farmers') renderFarmersTable(farmers);
+    renderFarmersTable(farmers);
   });
 }
 
