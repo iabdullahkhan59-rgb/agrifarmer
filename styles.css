@@ -2,9 +2,9 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --primary: #2e7d32;
-  --primary-light: #4caf50;
-  --primary-dark: #1b5e20;
+  --primary: #0a1172;
+  --primary-light: #1a2fa0;
+  --primary-dark: #060b5e;
   --accent: #ff8f00;
   --accent-light: #ffb300;
   --bg: #f4f6f8;
@@ -15,8 +15,8 @@
   --text-muted: #757575;
   --danger: #d32f2f;
   --danger-light: #ffebee;
-  --success: #388e3c;
-  --success-light: #e8f5e9;
+  --success: #0d47a1;
+  --success-light: #e8eaf6;
   --warning: #f57c00;
   --sidebar-w: 240px;
   --topbar-h: 60px;
@@ -172,7 +172,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 }
 .form-group input:focus, .form-group select:focus {
   outline: none; border-color: var(--primary-light);
-  box-shadow: 0 0 0 3px rgba(76,175,80,0.12);
+  box-shadow: 0 0 0 3px rgba(26,47,160,0.12);
 }
 .form-group input.error { border-color: var(--danger); }
 
@@ -199,7 +199,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 }
 .brand-header.sona { background: #fff8e1; color: #e65100; }
 .brand-header.engro { background: #e3f2fd; color: #1565c0; }
-.brand-header.fatima { background: #e8f5e9; color: #2e7d32; }
+.brand-header.fatima { background: #e8eaf6; color: #0a1172; }
 .brand-header.yara { background: #e8eaf6; color: #283593; }
 
 .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0; }
@@ -257,7 +257,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   padding: 50px 30px; text-align: center; background: var(--success-light);
   cursor: pointer; transition: background 0.2s;
 }
-.drop-zone.drag-over { background: #c8e6c9; }
+.drop-zone.drag-over { background: #c5cae9; }
 .drop-icon { font-size: 3rem; margin-bottom: 12px; }
 .drop-zone p { color: var(--text-muted); margin-bottom: 14px; }
 .upload-preview { margin-top: 24px; }
@@ -383,7 +383,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   font-size: 0.9rem; color: #1565c0;
   display: flex; align-items: center; gap: 8px;
 }
-.nearby-status.found { background: var(--success-light); border-color: #a5d6a7; color: var(--success); }
+.nearby-status.found { background: var(--success-light); border-color: #9fa8da; color: var(--success); }
 .nearby-status.none  { background: #fff3e0; border-color: #ffcc80; color: #e65100; }
 
 #nearbyMap {
@@ -478,7 +478,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 }
 .form-group textarea:focus {
   outline: none; border-color: var(--primary-light);
-  box-shadow: 0 0 0 3px rgba(76,175,80,0.12);
+  box-shadow: 0 0 0 3px rgba(26,47,160,0.12);
 }
 
 /* ===== CUSTOM CROP INPUT ===== */
@@ -493,7 +493,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 }
 .custom-crop-row input:focus {
   outline: none; border-color: var(--primary-light);
-  box-shadow: 0 0 0 3px rgba(76,175,80,0.12);
+  box-shadow: 0 0 0 3px rgba(26,47,160,0.12);
 }
 
 .custom-crops-tags {
@@ -813,7 +813,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 }
 .auth-success {
   background: var(--success-light); color: var(--success);
-  border: 1px solid #a5d6a7; border-radius: 7px;
+  border: 1px solid #9fa8da; border-radius: 7px;
   padding: 8px 12px; font-size: 0.82rem;
   text-align: left; margin-bottom: 8px;
 }

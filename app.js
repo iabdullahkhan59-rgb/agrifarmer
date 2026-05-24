@@ -462,7 +462,7 @@ function viewFarmer(id) {
     <div class="detail-row"><span class="detail-label">Full Address:</span><span class="detail-value">${escHtml(f.fullAddress || '�')}</span></div>
     <div class="detail-row"><span class="detail-label">GPS Location:</span><span class="detail-value">${escHtml(loc)}</span></div>
     <div class="detail-row"><span class="detail-label">Date Added:</span><span class="detail-value">${f.date ? new Date(f.date).toLocaleString('en-PK') : '�'}</span></div>
-    <h4 style="margin:16px 0 8px;color:#2e7d32">Fertilizer Usage</h4>
+    <h4 style="margin:16px 0 8px;color:#0a1172">Fertilizer Usage</h4>
     <table class="fertilizer-table">
       <thead><tr><th>Product</th><th>Brand</th><th>Bags</th><th>Dealer</th></tr></thead>
       <tbody>${prodRows}</tbody>
@@ -565,7 +565,7 @@ function renderDashboard() {
     data: {
       labels: prodLabels.length ? prodLabels : ['No data'],
       datasets: [{ label: 'Bags', data: prodLabels.length ? prodValues : [0],
-        backgroundColor: '#4caf50', borderRadius: 5 }]
+        backgroundColor: '#0a1172', borderRadius: 5 }]
     },
     options: { responsive: true, plugins: { legend: { display: false } },
       scales: { x: { ticks: { font: { size: 10 } } } } }
@@ -578,7 +578,7 @@ function renderDashboard() {
   }));
   const brandLabels = Object.keys(brandTotals);
   const brandValues = Object.values(brandTotals);
-  const brandColors = ['#ff8f00','#1565c0','#2e7d32','#283593','#c62828','#6a1b9a'];
+  const brandColors = ['#ff8f00','#1565c0','#0a1172','#283593','#c62828','#6a1b9a'];
 
   destroyChart('chartBrandPie');
   const ctxBrand = document.getElementById('chartBrandPie').getContext('2d');
@@ -623,7 +623,7 @@ function renderDashboard() {
   }));
   const cropLabels = Object.keys(cropTotals);
   const cropValues = Object.values(cropTotals);
-  const cropColors = ['#4caf50','#ff9800','#2196f3','#9c27b0','#f44336','#00bcd4','#8bc34a','#ff5722','#607d8b'];
+  const cropColors = ['#0a1172','#ff9800','#2196f3','#9c27b0','#f44336','#00bcd4','#8bc34a','#ff5722','#607d8b'];
 
   destroyChart('chartCropPie');
   const ctxCrop = document.getElementById('chartCropPie').getContext('2d');
@@ -710,7 +710,7 @@ function runInsights() {
     type: 'bar',
     data: {
       labels: pLabels,
-      datasets: [{ label: 'Bags', data: pValues, backgroundColor: '#4caf50', borderRadius: 5 }]
+      datasets: [{ label: 'Bags', data: pValues, backgroundColor: '#0a1172', borderRadius: 5 }]
     },
     options: { responsive: true, plugins: { legend: { display: false } },
       scales: { x: { ticks: { font: { size: 10 } } } } }
@@ -719,7 +719,7 @@ function runInsights() {
   // Brand chart
   const bLabels = Object.keys(brandTotals);
   const bValues = Object.values(brandTotals);
-  const bColors = ['#ff8f00','#1565c0','#2e7d32','#283593'];
+  const bColors = ['#ff8f00','#1565c0','#0a1172','#283593'];
   destroyChart('chartInsightBrand');
   const ctxIB = document.getElementById('chartInsightBrand').getContext('2d');
   chartInstances['chartInsightBrand'] = new Chart(ctxIB, {
@@ -1034,7 +1034,7 @@ function runNearbySearch() {
   // Draw radius circle
   nearbyCircle = L.circle([nearbyUserLat, nearbyUserLng], {
     radius: radius * 1000,
-    color: '#2e7d32', fillColor: '#4caf50', fillOpacity: 0.07,
+    color: '#0a1172', fillColor: '#1a2fa0', fillOpacity: 0.07,
     weight: 2, dashArray: '6 4'
   }).addTo(nearbyMapInstance);
 
@@ -1062,7 +1062,7 @@ function runNearbySearch() {
       className: '',
       html: `<div style="
         width:14px;height:14px;border-radius:50%;
-        background:${isNear ? '#2e7d32' : '#9e9e9e'};
+        background:${isNear ? '#0a1172' : '#9e9e9e'};
         border:2.5px solid #fff;
         box-shadow:0 1px 4px rgba(0,0,0,0.3);
       "></div>`,
@@ -1079,7 +1079,7 @@ function runNearbySearch() {
         ${addrLine ? `<span style="color:#555;font-size:0.82rem">?? ${escHtml(addrLine)}</span><br>` : ''}
         <span style="color:#555;font-size:0.82rem">?? ${escHtml(crops)}</span><br>
         <span style="color:#555;font-size:0.82rem">?? ${totalBags} bags total</span><br>
-        <span style="color:${isNear ? '#2e7d32' : '#9e9e9e'};font-weight:600;font-size:0.85rem">
+        <span style="color:${isNear ? '#0a1172' : '#9e9e9e'};font-weight:600;font-size:0.85rem">
           ?? ${f.distKm.toFixed(2)} km away
         </span>
       </div>`;
