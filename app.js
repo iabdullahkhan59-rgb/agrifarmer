@@ -3,7 +3,10 @@
 // Data stored in db (with localStorage as local cache)
 // ============================================================
 
-// ===== SUPABASE CONFIG (using fetch/REST - compatible with publishable key) =====
+// ===== SUPABASE CONFIG =====
+// NOTE: This is the public anon key — safe for frontend use.
+// Real security is enforced by Supabase Row Level Security (RLS) policies.
+// Do NOT replace this with your service_role key.
 const SUPABASE_URL = 'https://jnnbtvgobqzdqyafxxvp.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpubmJ0dmdvYnF6ZHF5YWZ4eHZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NDA5MzIsImV4cCI6MjA5NTExNjkzMn0.BM16r68FoL3vwRBnenPL4W6rHNKG1MXl0N5kLe4ViFI';
 const REST_URL = SUPABASE_URL + '/rest/v1';
