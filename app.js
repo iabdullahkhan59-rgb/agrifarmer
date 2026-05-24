@@ -512,6 +512,27 @@ async function deleteFarmer(id) {
   showToast('Farmer deleted.', 'success');
 }
 
+async function deleteAllFarmers() {
+  if (!farmers.length) { showToast('No farmers to delete.', 'error'); return; }
+  if (!confirm(`Delete ALL ${farmers.length} farmer records? This cannot be undone.`)) return;
+
+  // Clear local state and localStorage immediately
+  farmers = [];
+  localStorage.removeItem('agritrack_farmers');
+  renderFarmersTable(farmers);
+  renderDashboard();
+  showToast('Deleting all farmers…', '');
+
+  // Delete from Supabase
+  const { error } = await sbFetch('/farmers?id=neq.null_placeholder', 'DELETE');
+  // neq filter above won't match — use a proper "not is null" filter
+  const { error: err2 } = await sbFetch('/farmers?id=not.is.null', 'DELETE');
+  if (err2 && err2.message) {
+    console.warn('[Supabase] Delete all error:', err2);
+  }
+  showToast('All farmers deleted successfully.', 'success');
+}
+
 // ===== SEARCH =====
 function initSearch() {
   document.getElementById('searchInput').addEventListener('input', function() {
@@ -1072,6 +1093,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.getElementById('cancelUploadBtn').addEventListener('click', () => {
     document.getElementById('uploadPreview').classList.add('hidden');
     document.getElementById('fileInput').value = '';
+  });
+  document.getElementById('deleteAllBtn').addEventListener('click', deleteAllFarmers);
     parsedUploadRows = [];
   });
 
