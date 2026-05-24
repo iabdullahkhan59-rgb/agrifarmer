@@ -1,4 +1,4 @@
-/* ===== RESET & BASE ===== */
+﻿/* ===== RESET & BASE ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -708,66 +708,68 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   position: fixed; inset: 0; z-index: 1000;
   background: linear-gradient(135deg, #0a1172 0%, #1b3a8a 50%, #0d47a1 100%);
   display: flex; align-items: center; justify-content: center;
-  padding: 20px;
+  padding: 16px;
   min-height: 100vh;
+  overflow-y: auto;
 }
 
 .auth-card {
   background: #fff;
   border-radius: 20px;
-  padding: 36px 32px;
+  padding: 28px 28px 24px;
   width: 100%; max-width: 420px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   text-align: center;
+  margin: auto;
 }
 
 /* Logo */
 .auth-logo-wrap {
-  width: 90px; height: 90px;
+  width: 80px; height: 80px;
   border-radius: 50%;
   overflow: hidden;
-  margin: 0 auto 14px;
-  border: 4px solid #0a1172;
-  box-shadow: 0 4px 16px rgba(10,17,114,0.25);
-  background: #0a1172;
+  margin: 0 auto 10px;
+  border: 3px solid #e8eaf6;
+  box-shadow: 0 4px 16px rgba(10,17,114,0.15);
+  background: #fff;
   display: flex; align-items: center; justify-content: center;
 }
 .auth-logo {
   width: 100%; height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 50%;
 }
 
 .auth-brand {
-  font-size: 1.5rem; font-weight: 800;
+  font-size: 1.4rem; font-weight: 800;
   color: #0a1172; margin-bottom: 2px;
 }
 .auth-tagline {
-  font-size: 0.82rem; color: var(--text-muted);
-  margin-bottom: 24px;
+  font-size: 0.78rem; color: var(--text-muted);
+  margin-bottom: 18px;
 }
 .auth-title {
-  font-size: 1.15rem; font-weight: 700;
-  color: var(--text); margin-bottom: 20px;
-  padding-bottom: 12px;
+  font-size: 1.05rem; font-weight: 700;
+  color: var(--text); margin-bottom: 16px;
+  padding-bottom: 10px;
   border-bottom: 2px solid var(--border);
 }
 .auth-sub {
-  font-size: 0.88rem; color: var(--text-muted);
-  margin-bottom: 16px; margin-top: -8px;
+  font-size: 0.85rem; color: var(--text-muted);
+  margin-bottom: 14px; margin-top: -6px;
 }
 
 /* Fields */
 .auth-field {
-  text-align: left; margin-bottom: 14px;
+  text-align: left; margin-bottom: 12px;
 }
 .auth-field label {
-  display: block; font-size: 0.82rem;
+  display: block; font-size: 0.78rem;
   font-weight: 600; color: var(--text-muted);
-  margin-bottom: 5px;
+  margin-bottom: 4px;
 }
 .auth-field input {
-  width: 100%; padding: 11px 14px;
+  width: 100%; padding: 10px 12px;
   border: 1.5px solid var(--border);
   border-radius: 8px; font-size: 0.95rem;
   transition: border-color 0.2s;
@@ -779,12 +781,8 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   box-shadow: 0 0 0 3px rgba(10,17,114,0.1);
 }
 
-.auth-input-wrap {
-  position: relative;
-}
-.auth-input-wrap input {
-  padding-right: 44px;
-}
+.auth-input-wrap { position: relative; }
+.auth-input-wrap input { padding-right: 44px; }
 .auth-eye {
   position: absolute; right: 10px; top: 50%;
   transform: translateY(-50%);
@@ -795,13 +793,12 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 
 /* Button */
 .auth-btn {
-  width: 100%; padding: 13px;
+  width: 100%; padding: 12px;
   background: #0a1172; color: #fff;
   border: none; border-radius: 8px;
-  font-size: 1rem; font-weight: 600;
-  cursor: pointer; margin-top: 6px;
+  font-size: 0.95rem; font-weight: 600;
+  cursor: pointer; margin-top: 4px;
   transition: background 0.2s, transform 0.1s;
-  letter-spacing: 0.3px;
 }
 .auth-btn:hover { background: #1b3a8a; }
 .auth-btn:active { transform: scale(0.98); }
@@ -811,25 +808,25 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .auth-error {
   background: var(--danger-light); color: var(--danger);
   border: 1px solid #ffcdd2; border-radius: 7px;
-  padding: 9px 12px; font-size: 0.85rem;
-  text-align: left; margin-bottom: 10px;
+  padding: 8px 12px; font-size: 0.82rem;
+  text-align: left; margin-bottom: 8px;
 }
 .auth-success {
   background: var(--success-light); color: var(--success);
   border: 1px solid #a5d6a7; border-radius: 7px;
-  padding: 9px 12px; font-size: 0.85rem;
-  text-align: left; margin-bottom: 10px;
+  padding: 8px 12px; font-size: 0.82rem;
+  text-align: left; margin-bottom: 8px;
 }
 
 /* Links */
 .auth-links {
-  margin-top: 18px; display: flex;
+  margin-top: 14px; display: flex;
   align-items: center; justify-content: center;
   gap: 8px; flex-wrap: wrap;
 }
 .auth-link {
   background: none; border: none;
-  color: #0a1172; font-size: 0.88rem;
+  color: #0a1172; font-size: 0.85rem;
   cursor: pointer; text-decoration: underline;
   padding: 2px 4px;
 }
@@ -861,14 +858,56 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   text-align: left; width: 100%;
   transition: background 0.2s;
 }
-.sidebar-signout:hover {
-  background: rgba(255,255,255,0.15);
-  color: #fff;
+.sidebar-signout:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+/* ===== AUTH RESPONSIVE ===== */
+
+/* Short screens — reduce spacing so nothing cuts off */
+@media (max-height: 700px) {
+  .auth-card { padding: 20px 24px 18px; }
+  .auth-logo-wrap { width: 60px; height: 60px; margin-bottom: 8px; }
+  .auth-brand { font-size: 1.2rem; }
+  .auth-tagline { margin-bottom: 12px; font-size: 0.72rem; }
+  .auth-title { margin-bottom: 12px; padding-bottom: 8px; }
+  .auth-field { margin-bottom: 9px; }
+  .auth-field input { padding: 8px 10px; font-size: 0.9rem; }
+  .auth-btn { padding: 10px; }
+  .auth-links { margin-top: 10px; }
 }
 
-/* Mobile auth */
-@media (max-width: 480px) {
-  .auth-card { padding: 28px 20px; border-radius: 16px; }
-  .auth-logo-wrap { width: 76px; height: 76px; }
-  .auth-brand { font-size: 1.3rem; }
+@media (max-height: 580px) {
+  .auth-logo-wrap { width: 48px; height: 48px; margin-bottom: 6px; }
+  .auth-brand { font-size: 1.1rem; }
+  .auth-tagline { display: none; }
+  .auth-card { padding: 16px 20px 14px; }
+  .auth-field { margin-bottom: 7px; }
+  .auth-field input { padding: 7px 10px; }
+  .auth-btn { padding: 9px; }
+}
+
+/* Narrow phones */
+@media (max-width: 400px) {
+  .auth-screen { padding: 10px; }
+  .auth-card { padding: 22px 16px 18px; border-radius: 14px; }
+  .auth-logo-wrap { width: 68px; height: 68px; }
+  .auth-brand { font-size: 1.2rem; }
+  .auth-field input { font-size: 16px; }
+}
+
+/* ===== PWA / STANDALONE MODE ===== */
+@supports (padding: env(safe-area-inset-top)) {
+  .topbar {
+    padding-left: max(24px, env(safe-area-inset-left));
+    padding-right: max(24px, env(safe-area-inset-right));
+  }
+  .sidebar { padding-top: env(safe-area-inset-top); }
+  .toast { bottom: max(24px, env(safe-area-inset-bottom)); }
+  .auth-screen { padding-top: max(16px, env(safe-area-inset-top)); }
+}
+
+@media (display-mode: standalone) {
+  .topbar {
+    padding-top: env(safe-area-inset-top);
+    height: calc(var(--topbar-h) + env(safe-area-inset-top));
+  }
 }
