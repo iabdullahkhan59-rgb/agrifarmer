@@ -1,0 +1,401 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgriTrack – Farmer & Fertilizer Management</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-icon">🌾</span>
+        <span class="logo-text">AgriTrack</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-page="dashboard">
+          <span class="nav-icon">📊</span><span class="nav-label">Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-page="add-farmer">
+          <span class="nav-icon">➕</span><span class="nav-label">Add Farmer</span>
+        </a>
+        <a href="#" class="nav-item" data-page="farmers">
+          <span class="nav-icon">👨‍🌾</span><span class="nav-label">Farmers</span>
+        </a>
+        <a href="#" class="nav-item" data-page="upload">
+          <span class="nav-icon">📤</span><span class="nav-label">Upload Excel</span>
+        </a>
+        <a href="#" class="nav-item" data-page="insights">
+          <span class="nav-icon">💡</span><span class="nav-label">Insights</span>
+        </a>
+        <a href="#" class="nav-item" data-page="nearby">
+          <span class="nav-icon">📍</span><span class="nav-label">Nearby Farmers</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <span>AgriTrack v2.0</span>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <h1 class="page-title" id="pageTitle">Dashboard</h1>
+        <div class="topbar-actions">
+          <button class="btn btn-outline" id="exportBtn">⬇ Export Excel</button>
+        </div>
+      </header>
+
+      <!-- Pages -->
+      <div class="page-content">
+
+        <!-- DASHBOARD PAGE -->
+        <section id="page-dashboard" class="page active">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon">👨‍🌾</div>
+              <div class="stat-info">
+                <div class="stat-value" id="statTotalFarmers">0</div>
+                <div class="stat-label">Total Farmers</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">🧪</div>
+              <div class="stat-info">
+                <div class="stat-value" id="statTotalBags">0</div>
+                <div class="stat-label">Total Bags Sold</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">🏪</div>
+              <div class="stat-info">
+                <div class="stat-value" id="statTotalDealers">0</div>
+                <div class="stat-label">Active Dealers</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">🌱</div>
+              <div class="stat-info">
+                <div class="stat-value" id="statTopBrand">—</div>
+                <div class="stat-label">Top Brand</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-bar">
+            <label>Filter by:</label>
+            <select id="dashboardFilter">
+              <option value="all">All Time</option>
+              <option value="week">Last Week</option>
+              <option value="month">Last Month</option>
+            </select>
+          </div>
+
+          <div class="charts-grid">
+            <div class="chart-card">
+              <h3>Product Usage (Bags)</h3>
+              <canvas id="chartProductBar"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Brand Distribution</h3>
+              <canvas id="chartBrandPie"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Dealer-wise Sales</h3>
+              <canvas id="chartDealerBar"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Crop Pattern Distribution</h3>
+              <canvas id="chartCropPie"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <!-- ADD FARMER PAGE -->
+        <section id="page-add-farmer" class="page">
+          <div class="form-container">
+            <h2 class="form-title">Farmer Registration</h2>
+            <form id="farmerForm">
+              <input type="hidden" id="editFarmerId" value="" />
+
+              <div class="form-section">
+                <h3 class="section-title">👤 Farmer Information</h3>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="farmerName">Farmer Name *</label>
+                    <input type="text" id="farmerName" placeholder="Enter full name" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="contactNumber">Contact Number *</label>
+                    <input type="tel" id="contactNumber" placeholder="03XX-XXXXXXX" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="dealerName">Dealer Name *</label>
+                    <input type="text" id="dealerName" placeholder="Enter dealer name" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="landArea">Total Land Area (Acres) *</label>
+                    <input type="number" id="landArea" placeholder="e.g. 5.5" step="0.1" min="0" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="villageName">Village / Mauza</label>
+                    <input type="text" id="villageName" placeholder="e.g. Chak 45/WB" />
+                  </div>
+                  <div class="form-group">
+                    <label for="tehsilName">Tehsil</label>
+                    <input type="text" id="tehsilName" placeholder="e.g. Vehari" />
+                  </div>
+                  <div class="form-group">
+                    <label for="districtName">District *</label>
+                    <input type="text" id="districtName" placeholder="e.g. Vehari" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="provinceName">Province</label>
+                    <select id="provinceName">
+                      <option value="">— Select Province —</option>
+                      <option value="Punjab">Punjab</option>
+                      <option value="Sindh">Sindh</option>
+                      <option value="KPK">Khyber Pakhtunkhwa (KPK)</option>
+                      <option value="Balochistan">Balochistan</option>
+                      <option value="AJK">Azad Jammu & Kashmir</option>
+                      <option value="GB">Gilgit-Baltistan</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="fullAddress">Full Address</label>
+                  <textarea id="fullAddress" rows="2" placeholder="House / Street / Chak number, complete address..."></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label>Crop Pattern (select all that apply) *</label>
+                  <div class="checkbox-group" id="cropPatternGroup">
+                    <label class="checkbox-item"><input type="checkbox" value="Wheat" /> 🌾 Wheat</label>
+                    <label class="checkbox-item"><input type="checkbox" value="Rice" /> 🍚 Rice</label>
+                    <label class="checkbox-item"><input type="checkbox" value="Cotton" /> 🌿 Cotton</label>
+                    <label class="checkbox-item"><input type="checkbox" value="Sugarcane" /> 🎋 Sugarcane</label>
+                    <label class="checkbox-item"><input type="checkbox" value="Maize" /> 🌽 Maize</label>
+                    <label class="checkbox-item"><input type="checkbox" value="Sunflower" /> 🌻 Sunflower</label>
+                    <label class="checkbox-item"><input type="checkbox" value="Potato" /> 🥔 Potato</label>
+                    <label class="checkbox-item"><input type="checkbox" value="Raya" /> 🌼 Raya (Mustard)</label>
+                    <label class="checkbox-item"><input type="checkbox" value="Vegetables" /> 🥦 Vegetables</label>
+                    <label class="checkbox-item"><input type="checkbox" value="Fruits" /> 🍎 Fruits</label>
+                    <label class="checkbox-item"><input type="checkbox" value="Onion" /> 🧅 Onion</label>
+                    <label class="checkbox-item"><input type="checkbox" value="Garlic" /> 🧄 Garlic</label>
+                    <label class="checkbox-item"><input type="checkbox" value="Tomato" /> 🍅 Tomato</label>
+                    <label class="checkbox-item"><input type="checkbox" value="Chilli" /> 🌶 Chilli</label>
+                  </div>
+
+                  <!-- Custom crop input -->
+                  <div class="custom-crop-row">
+                    <input type="text" id="customCropInput" placeholder="Type a crop name e.g. Mung, Moong, Lentil…" />
+                    <button type="button" class="btn btn-outline btn-sm" id="addCustomCropBtn">＋ Add Crop</button>
+                  </div>
+                  <div class="custom-crops-tags" id="customCropsTags"></div>
+                </div>
+
+                <div class="form-group">
+                  <label>Location (click map to pick coordinates)</label>
+                  <div class="location-row">
+                    <input type="number" id="latitude" placeholder="Latitude" step="any" />
+                    <input type="number" id="longitude" placeholder="Longitude" step="any" />
+                    <button type="button" class="btn btn-outline btn-sm" id="detectLocationBtn">📍 Detect</button>
+                  </div>
+                  <div id="mapPicker"></div>
+                </div>
+              </div>
+
+              <!-- FERTILIZER SECTION -->
+              <div class="form-section">
+                <h3 class="section-title">🧪 Fertilizer / Product Usage</h3>
+
+                <!-- Sona FFC -->
+                <div class="brand-block">
+                  <div class="brand-header sona">🌟 Sona (FFC) Products</div>
+                  <div class="product-grid" id="sonaProducts">
+                    <!-- rendered by JS -->
+                  </div>
+                </div>
+
+                <!-- Engro -->
+                <div class="brand-block">
+                  <div class="brand-header engro">⚡ Engro Products</div>
+                  <div class="product-grid" id="engroProducts"></div>
+                </div>
+
+                <!-- Fatima / Sarsabz -->
+                <div class="brand-block">
+                  <div class="brand-header fatima">🌿 Fatima Fertilizer (Sarsabz)</div>
+                  <div class="product-grid" id="fatimaProducts"></div>
+                </div>
+
+                <!-- Yara -->
+                <div class="brand-block">
+                  <div class="brand-header yara">🔵 Yara International Products</div>
+                  <div class="product-grid" id="yaraProducts"></div>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="button" class="btn btn-outline" id="resetFormBtn">Reset</button>
+                <button type="submit" class="btn btn-primary" id="submitFormBtn">💾 Save Farmer</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- FARMERS LIST PAGE -->
+        <section id="page-farmers" class="page">
+          <div class="list-header">
+            <div class="search-bar">
+              <input type="text" id="searchInput" placeholder="🔍 Search by name or contact..." />
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table" id="farmersTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Contact</th>
+                  <th>Village / Tehsil</th>
+                  <th>District</th>
+                  <th>Address</th>
+                  <th>Land (Acres)</th>
+                  <th>Crops</th>
+                  <th>Dealer</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="farmersTableBody">
+                <tr><td colspan="11" class="empty-state">No farmers added yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- UPLOAD PAGE -->
+        <section id="page-upload" class="page">
+          <div class="upload-container">
+            <h2>Upload Excel / CSV File</h2>
+            <p class="upload-hint">Upload a .xlsx or .csv file with farmer data. The system will auto-map columns.</p>
+            <div class="drop-zone" id="dropZone">
+              <div class="drop-icon">📂</div>
+              <p>Drag & drop your file here, or</p>
+              <label class="btn btn-primary" for="fileInput">Browse File</label>
+              <input type="file" id="fileInput" accept=".xlsx,.csv" hidden />
+            </div>
+            <div id="uploadPreview" class="upload-preview hidden">
+              <h3>Preview (first 10 rows)</h3>
+              <div class="table-wrapper" id="previewTableWrapper"></div>
+              <div class="upload-actions">
+                <button class="btn btn-outline" id="cancelUploadBtn">Cancel</button>
+                <button class="btn btn-primary" id="confirmUploadBtn">✅ Import All Records</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- INSIGHTS PAGE -->
+        <section id="page-insights" class="page">          <div class="insights-container">
+            <h2>📊 Insights & Analytics</h2>
+            <div class="insights-filter">
+              <label>From:</label>
+              <input type="date" id="insightFrom" />
+              <label>To:</label>
+              <input type="date" id="insightTo" />
+              <button class="btn btn-primary" id="runInsightBtn">Generate Insights</button>
+            </div>
+            <div id="insightsResult" class="insights-result hidden">
+              <div class="insight-cards" id="insightCards"></div>
+              <div class="charts-grid">
+                <div class="chart-card">
+                  <h3>Top Products in Range</h3>
+                  <canvas id="chartInsightProduct"></canvas>
+                </div>
+                <div class="chart-card">
+                  <h3>Brand Comparison</h3>
+                  <canvas id="chartInsightBrand"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- NEARBY FARMERS PAGE -->
+        <section id="page-nearby" class="page">
+          <div class="nearby-container">
+
+            <!-- Top controls -->
+            <div class="nearby-controls">
+              <div class="nearby-controls-left">
+                <button class="btn btn-primary" id="nearbyDetectBtn">
+                  📍 Use My Current Location
+                </button>
+                <span class="nearby-or">or tap the map to set your position</span>
+              </div>
+              <div class="nearby-controls-right">
+                <label class="radius-label">Search radius:</label>
+                <select id="nearbyRadius">
+                  <option value="5">5 km</option>
+                  <option value="10" selected>10 km</option>
+                  <option value="20">20 km</option>
+                  <option value="50">50 km</option>
+                  <option value="100">100 km</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Status bar -->
+            <div class="nearby-status hidden" id="nearbyStatus">
+              <span id="nearbyStatusText"></span>
+            </div>
+
+            <!-- Map -->
+            <div id="nearbyMap"></div>
+
+            <!-- Results list -->
+            <div class="nearby-results hidden" id="nearbyResults">
+              <div class="nearby-results-header">
+                <h3 id="nearbyResultsTitle">Nearby Farmers</h3>
+                <span class="nearby-count-badge" id="nearbyCountBadge">0</span>
+              </div>
+              <div class="nearby-list" id="nearbyList"></div>
+            </div>
+
+          </div>
+        </section>
+
+      </div><!-- end page-content -->
+    </main>
+  </div><!-- end #app -->
+
+  <!-- Edit/View Modal -->
+  <div class="modal-overlay hidden" id="modalOverlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle">Farmer Details</h3>
+        <button class="modal-close" id="modalClose">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast hidden" id="toast"></div>
+
+  <!-- All scripts at bottom so DOM is ready -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
