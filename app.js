@@ -1099,6 +1099,197 @@ window.deleteFarmer = deleteFarmer;
 window.nearbyFlyTo = nearbyFlyTo;
 window.removeCustomCrop = removeCustomCrop;
 
+// ===== DUMMY DATA SEED =====
+async function seedDummyData() {
+  const btn = document.getElementById('seedDummyBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Adding...'; }
+
+  const dummyFarmers = [
+    {
+      name: 'Muhammad Aslam',       contact: '0300-1234567', dealer: 'Chaudhry Agri Store',
+      landArea: 12, village: 'Chak 45/WB',  tehsil: 'Vehari',    district: 'Vehari',    province: 'Punjab',
+      crops: ['Wheat', 'Cotton'],
+      lat: 30.0444, lng: 72.3527,
+      products: [
+        { id: 'sona_neem_urea', name: 'Sona Neem Coated Urea', brand: 'Sona (FFC)', bags: 8, dealer: 'Chaudhry Agri Store' },
+        { id: 'sona_boron_dap', name: 'Sona Boron DAP',        brand: 'Sona (FFC)', bags: 5, dealer: 'Chaudhry Agri Store' }
+      ]
+    },
+    {
+      name: 'Allah Ditta',          contact: '0301-2345678', dealer: 'Raza Fertilizer',
+      landArea: 8,  village: 'Chak 12/EB',  tehsil: 'Burewala',  district: 'Vehari',    province: 'Punjab',
+      crops: ['Wheat', 'Sugarcane'],
+      lat: 30.1667, lng: 72.6833,
+      products: [
+        { id: 'engro_generic',  name: 'Engro Product (Generic)',  brand: 'Engro',       bags: 10, dealer: 'Raza Fertilizer' },
+        { id: 'sona_zinc_urea', name: 'Sona Zinc Coated Urea',   brand: 'Sona (FFC)',  bags: 6,  dealer: 'Raza Fertilizer' }
+      ]
+    },
+    {
+      name: 'Ghulam Hussain',       contact: '0302-3456789', dealer: 'Al-Barkat Seeds',
+      landArea: 20, village: 'Mauza Kot Addu', tehsil: 'Kot Addu', district: 'Muzaffargarh', province: 'Punjab',
+      crops: ['Cotton', 'Wheat', 'Maize'],
+      lat: 30.4700, lng: 70.9600,
+      products: [
+        { id: 'fatima_generic', name: 'Sarsabz Product (Generic)', brand: 'Fatima (Sarsabz)', bags: 15, dealer: 'Al-Barkat Seeds' },
+        { id: 'sona_neem_urea', name: 'Sona Neem Coated Urea',    brand: 'Sona (FFC)',        bags: 12, dealer: 'Al-Barkat Seeds' }
+      ]
+    },
+    {
+      name: 'Tariq Mehmood',        contact: '0303-4567890', dealer: 'Green Field Agri',
+      landArea: 6,  village: 'Chak 33/SP',  tehsil: 'Sahiwal',   district: 'Sahiwal',   province: 'Punjab',
+      crops: ['Rice', 'Wheat'],
+      lat: 30.6706, lng: 73.1064,
+      products: [
+        { id: 'yara_tropicote', name: 'YaraLiva Tropicote', brand: 'Yara International', bags: 4, dealer: 'Green Field Agri' }
+      ]
+    },
+    {
+      name: 'Bashir Ahmed',         contact: '0304-5678901', dealer: 'Pak Agro Services',
+      landArea: 15, village: 'Chak 100/NB', tehsil: 'Faisalabad', district: 'Faisalabad', province: 'Punjab',
+      crops: ['Wheat', 'Sunflower', 'Maize'],
+      lat: 31.4180, lng: 73.0790,
+      products: [
+        { id: 'sona_neem_urea', name: 'Sona Neem Coated Urea', brand: 'Sona (FFC)', bags: 20, dealer: 'Pak Agro Services' },
+        { id: 'engro_generic',  name: 'Engro Product (Generic)', brand: 'Engro',     bags: 8,  dealer: 'Pak Agro Services' }
+      ]
+    },
+    {
+      name: 'Zulfiqar Ali',         contact: '0305-6789012', dealer: 'Chaudhry Agri Store',
+      landArea: 10, village: 'Chak 22/WB',  tehsil: 'Vehari',    district: 'Vehari',    province: 'Punjab',
+      crops: ['Cotton', 'Raya'],
+      lat: 30.0200, lng: 72.3900,
+      products: [
+        { id: 'sona_boron_dap', name: 'Sona Boron DAP',      brand: 'Sona (FFC)',        bags: 7,  dealer: 'Chaudhry Agri Store' },
+        { id: 'fatima_generic', name: 'Sarsabz Product (Generic)', brand: 'Fatima (Sarsabz)', bags: 9, dealer: 'Chaudhry Agri Store' }
+      ]
+    },
+    {
+      name: 'Nasir Iqbal',          contact: '0306-7890123', dealer: 'Raza Fertilizer',
+      landArea: 5,  village: 'Mauza Tibba', tehsil: 'Multan',    district: 'Multan',    province: 'Punjab',
+      crops: ['Vegetables', 'Onion', 'Tomato'],
+      lat: 30.1575, lng: 71.5249,
+      products: [
+        { id: 'yara_bortrac',   name: 'YaraVita Bortrac',    brand: 'Yara International', bags: 3, dealer: 'Raza Fertilizer' },
+        { id: 'yara_cropboost', name: 'YaraVita Crop Boost', brand: 'Yara International', bags: 2, dealer: 'Raza Fertilizer' }
+      ]
+    },
+    {
+      name: 'Riaz Hussain',         contact: '0307-8901234', dealer: 'Al-Barkat Seeds',
+      landArea: 18, village: 'Chak 55/EB',  tehsil: 'Okara',     district: 'Okara',     province: 'Punjab',
+      crops: ['Rice', 'Wheat', 'Sugarcane'],
+      lat: 30.8100, lng: 73.4500,
+      products: [
+        { id: 'engro_generic',  name: 'Engro Product (Generic)', brand: 'Engro',      bags: 14, dealer: 'Al-Barkat Seeds' },
+        { id: 'sona_neem_urea', name: 'Sona Neem Coated Urea',  brand: 'Sona (FFC)', bags: 10, dealer: 'Al-Barkat Seeds' }
+      ]
+    },
+    {
+      name: 'Imran Khan',           contact: '0308-9012345', dealer: 'Green Field Agri',
+      landArea: 9,  village: 'Chak 7/SP',   tehsil: 'Pakpattan', district: 'Pakpattan', province: 'Punjab',
+      crops: ['Wheat', 'Cotton'],
+      lat: 30.3400, lng: 73.3900,
+      products: [
+        { id: 'sona_zinc_urea', name: 'Sona Zinc Coated Urea', brand: 'Sona (FFC)', bags: 11, dealer: 'Green Field Agri' }
+      ]
+    },
+    {
+      name: 'Khalid Mahmood',       contact: '0309-0123456', dealer: 'Pak Agro Services',
+      landArea: 25, village: 'Mauza Garh',  tehsil: 'Jhang',     district: 'Jhang',     province: 'Punjab',
+      crops: ['Wheat', 'Maize', 'Sunflower'],
+      lat: 31.2700, lng: 72.3200,
+      products: [
+        { id: 'fatima_generic', name: 'Sarsabz Product (Generic)', brand: 'Fatima (Sarsabz)', bags: 18, dealer: 'Pak Agro Services' },
+        { id: 'yara_tropicote', name: 'YaraLiva Tropicote',        brand: 'Yara International', bags: 6, dealer: 'Pak Agro Services' }
+      ]
+    },
+    {
+      name: 'Shahid Nawaz',         contact: '0310-1234567', dealer: 'Chaudhry Agri Store',
+      landArea: 7,  village: 'Chak 88/WB',  tehsil: 'Lodhran',   district: 'Lodhran',   province: 'Punjab',
+      crops: ['Cotton', 'Wheat'],
+      lat: 29.5300, lng: 71.6300,
+      products: [
+        { id: 'sona_neem_urea', name: 'Sona Neem Coated Urea', brand: 'Sona (FFC)', bags: 9, dealer: 'Chaudhry Agri Store' }
+      ]
+    },
+    {
+      name: 'Abdul Rehman',         contact: '0311-2345678', dealer: 'Raza Fertilizer',
+      landArea: 14, village: 'Mauza Khanpur', tehsil: 'Rahim Yar Khan', district: 'Rahim Yar Khan', province: 'Punjab',
+      crops: ['Sugarcane', 'Wheat', 'Cotton'],
+      lat: 28.4200, lng: 70.2900,
+      products: [
+        { id: 'engro_generic',  name: 'Engro Product (Generic)',   brand: 'Engro',            bags: 16, dealer: 'Raza Fertilizer' },
+        { id: 'sona_boron_dap', name: 'Sona Boron DAP',           brand: 'Sona (FFC)',        bags: 8,  dealer: 'Raza Fertilizer' }
+      ]
+    },
+    {
+      name: 'Pervez Akhtar',        contact: '0312-3456789', dealer: 'Al-Barkat Seeds',
+      landArea: 11, village: 'Chak 60/NB',  tehsil: 'Sargodha',  district: 'Sargodha',  province: 'Punjab',
+      crops: ['Wheat', 'Rice', 'Fruits'],
+      lat: 32.0836, lng: 72.6711,
+      products: [
+        { id: 'yara_frutrel',   name: 'YaraVita Frutrel',   brand: 'Yara International', bags: 5, dealer: 'Al-Barkat Seeds' },
+        { id: 'yara_solatrel',  name: 'YaraVita Solatrel',  brand: 'Yara International', bags: 4, dealer: 'Al-Barkat Seeds' }
+      ]
+    },
+    {
+      name: 'Sajid Hussain',        contact: '0313-4567890', dealer: 'Green Field Agri',
+      landArea: 3,  village: 'Mauza Daska',  tehsil: 'Daska',     district: 'Sialkot',   province: 'Punjab',
+      crops: ['Potato', 'Vegetables', 'Garlic'],
+      lat: 32.3300, lng: 74.3500,
+      products: [
+        { id: 'yara_amplix',    name: 'Yara Amplix Optitrac (Biostimulant)', brand: 'Yara International', bags: 2, dealer: 'Green Field Agri' },
+        { id: 'fatima_generic', name: 'Sarsabz Product (Generic)',           brand: 'Fatima (Sarsabz)',   bags: 3, dealer: 'Green Field Agri' }
+      ]
+    },
+    {
+      name: 'Mushtaq Ahmed',        contact: '0314-5678901', dealer: 'Pak Agro Services',
+      landArea: 16, village: 'Chak 200/RB', tehsil: 'Bahawalpur', district: 'Bahawalpur', province: 'Punjab',
+      crops: ['Cotton', 'Wheat', 'Chilli'],
+      lat: 29.3956, lng: 71.6836,
+      products: [
+        { id: 'sona_neem_urea', name: 'Sona Neem Coated Urea',    brand: 'Sona (FFC)',        bags: 22, dealer: 'Pak Agro Services' },
+        { id: 'sona_zinc_urea', name: 'Sona Zinc Coated Urea',    brand: 'Sona (FFC)',        bags: 10, dealer: 'Pak Agro Services' },
+        { id: 'engro_generic',  name: 'Engro Product (Generic)',   brand: 'Engro',             bags: 7,  dealer: 'Pak Agro Services' }
+      ]
+    }
+  ];
+
+  // Spread dates over the last 6 months
+  const now = Date.now();
+  const sixMonths = 180 * 24 * 60 * 60 * 1000;
+
+  let added = 0;
+  for (let i = 0; i < dummyFarmers.length; i++) {
+    const d = dummyFarmers[i];
+    const farmer = {
+      id: 'dummy_' + Date.now() + '_' + i,
+      name: d.name,
+      contact: d.contact,
+      dealer: d.dealer,
+      landArea: d.landArea,
+      crops: d.crops,
+      village: d.village,
+      tehsil: d.tehsil,
+      district: d.district,
+      province: d.province,
+      lat: d.lat,
+      lng: d.lng,
+      products: d.products,
+      date: new Date(now - sixMonths + (i * (sixMonths / dummyFarmers.length))).toISOString()
+    };
+    farmers.push(farmer);
+    await saveFarmer(farmer);
+    added++;
+  }
+
+  renderFarmersTable(farmers);
+  renderDashboard();
+  showToast(added + ' dummy farmers added successfully!', 'success');
+  if (btn) { btn.disabled = false; btn.textContent = '🌱 Add Dummy Data'; }
+}
+window.seedDummyData = seedDummyData;
+
 // ===== NEARBY FARMERS =====
 let nearbyMapInstance = null;
 let nearbyUserMarker = null;
