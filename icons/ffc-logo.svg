@@ -1,0 +1,22 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#0a1172"/>
+  <!-- Diagonal stripes (left side) -->
+  <g fill="white" opacity="0.9">
+    <polygon points="18,60 42,60 18,80"/>
+    <polygon points="18,60 55,60 55,68 18,80"/>
+    <polygon points="18,75 55,68 55,78 18,95"/>
+    <polygon points="18,90 55,78 55,88 18,110"/>
+    <polygon points="18,105 55,88 55,98 18,125"/>
+    <!-- Simplified stripe block -->
+    <polygon points="15,55 58,45 58,52 15,62"/>
+    <polygon points="15,65 58,55 58,62 15,72"/>
+    <polygon points="15,75 58,65 58,72 15,82"/>
+    <polygon points="15,85 58,75 58,82 15,92"/>
+    <polygon points="15,95 58,85 58,92 15,102"/>
+  </g>
+  <!-- FFC Text -->
+  <text x="105" y="125" font-family="Arial Black, sans-serif" font-size="62" font-weight="900"
+    fill="none" stroke="white" stroke-width="3" text-anchor="middle" letter-spacing="2">FFC</text>
+  <text x="105" y="125" font-family="Arial Black, sans-serif" font-size="62" font-weight="900"
+    fill="#0a1172" text-anchor="middle" letter-spacing="2">FFC</text>
+</svg>

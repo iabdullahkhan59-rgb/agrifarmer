@@ -38,6 +38,104 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
+
+  <!-- ===== AUTH SCREEN ===== -->
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card">
+
+      <!-- Logo -->
+      <div class="auth-logo-wrap">
+        <img src="/icons/ffc-logo.svg" alt="FFC Logo" class="auth-logo" />
+      </div>
+      <h1 class="auth-brand">AgriTrack</h1>
+      <p class="auth-tagline">Farmer & Fertilizer Management</p>
+
+      <!-- SIGN IN -->
+      <div id="signinView">
+        <h2 class="auth-title">Welcome Back</h2>
+        <form id="signinForm" novalidate>
+          <div class="auth-field">
+            <label>Email</label>
+            <input type="email" id="signinEmail" placeholder="you@example.com" autocomplete="email" required />
+          </div>
+          <div class="auth-field">
+            <label>Password</label>
+            <div class="auth-input-wrap">
+              <input type="password" id="signinPassword" placeholder="••••••••" autocomplete="current-password" required />
+              <button type="button" class="auth-eye" onclick="togglePassword('signinPassword', this)">👁</button>
+            </div>
+          </div>
+          <div id="signinError" class="auth-error hidden"></div>
+          <button type="submit" id="signinBtn" class="auth-btn">Sign In</button>
+        </form>
+        <div class="auth-links">
+          <button class="auth-link" onclick="switchAuthView('reset')">Forgot password?</button>
+          <span class="auth-sep">·</span>
+          <button class="auth-link" onclick="switchAuthView('signup')">Create account</button>
+        </div>
+      </div>
+
+      <!-- SIGN UP -->
+      <div id="signupView" class="hidden">
+        <h2 class="auth-title">Create Account</h2>
+        <form id="signupForm" novalidate>
+          <div class="auth-field">
+            <label>Full Name</label>
+            <input type="text" id="signupName" placeholder="Muhammad Ali" autocomplete="name" required />
+          </div>
+          <div class="auth-field">
+            <label>Email</label>
+            <input type="email" id="signupEmail" placeholder="you@example.com" autocomplete="email" required />
+          </div>
+          <div class="auth-field">
+            <label>Password</label>
+            <div class="auth-input-wrap">
+              <input type="password" id="signupPassword" placeholder="Min. 6 characters" autocomplete="new-password" required />
+              <button type="button" class="auth-eye" onclick="togglePassword('signupPassword', this)">👁</button>
+            </div>
+          </div>
+          <div class="auth-field">
+            <label>Confirm Password</label>
+            <div class="auth-input-wrap">
+              <input type="password" id="signupConfirm" placeholder="Repeat password" autocomplete="new-password" required />
+              <button type="button" class="auth-eye" onclick="togglePassword('signupConfirm', this)">👁</button>
+            </div>
+          </div>
+          <div id="signupError" class="auth-error hidden"></div>
+          <div id="signupSuccess" class="auth-success hidden">
+            ✅ Account created! Check your email to confirm, then sign in.
+          </div>
+          <button type="submit" id="signupBtn" class="auth-btn">Create Account</button>
+        </form>
+        <div class="auth-links">
+          <button class="auth-link" onclick="switchAuthView('signin')">← Back to Sign In</button>
+        </div>
+      </div>
+
+      <!-- RESET PASSWORD -->
+      <div id="resetView" class="hidden">
+        <h2 class="auth-title">Reset Password</h2>
+        <p class="auth-sub">Enter your email and we'll send you a reset link.</p>
+        <form id="resetForm" novalidate>
+          <div class="auth-field">
+            <label>Email</label>
+            <input type="email" id="resetEmail" placeholder="you@example.com" autocomplete="email" required />
+          </div>
+          <div id="resetError" class="auth-error hidden"></div>
+          <div id="resetSuccess" class="auth-success hidden">
+            ✅ Reset link sent! Check your email inbox.
+          </div>
+          <button type="submit" id="resetBtn" class="auth-btn">Send Reset Link</button>
+        </form>
+        <div class="auth-links">
+          <button class="auth-link" onclick="switchAuthView('signin')">← Back to Sign In</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <!-- ===== END AUTH SCREEN ===== -->
+
   <div id="app">
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
@@ -66,7 +164,13 @@
         </a>
       </nav>
       <div class="sidebar-footer">
-        <span>AgriTrack v2.0</span>
+        <div class="sidebar-user">
+          <div class="sidebar-user-name" id="sidebarUserName"></div>
+          <div class="sidebar-user-email" id="sidebarUserEmail"></div>
+        </div>
+        <button class="sidebar-signout" onclick="handleSignOut()" title="Sign Out">
+          🚪 Sign Out
+        </button>
       </div>
     </aside>
 
@@ -426,6 +530,17 @@
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="app.js"></script>
+  <script src="auth.js"></script>
+
+  <!-- ===== AUTH FORM WIRING ===== -->
+  <script>
+    document.getElementById('signinForm').addEventListener('submit', handleSignIn);
+    document.getElementById('signupForm').addEventListener('submit', handleSignUp);
+    document.getElementById('resetForm').addEventListener('submit', handleResetPassword);
+    window.handleSignOut = handleSignOut;
+    window.switchAuthView = switchAuthView;
+    window.togglePassword = togglePassword;
+  </script>
 
   <!-- ===== SERVICE WORKER REGISTRATION ===== -->
   <script>

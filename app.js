@@ -7,12 +7,16 @@
 const SUPABASE_URL = 'https://jnnbtvgobqzdqyafxxvp.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpubmJ0dmdvYnF6ZHF5YWZ4eHZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NDA5MzIsImV4cCI6MjA5NTExNjkzMn0.BM16r68FoL3vwRBnenPL4W6rHNKG1MXl0N5kLe4ViFI';
 const REST_URL = SUPABASE_URL + '/rest/v1';
-const HEADERS = {
-  'Content-Type': 'application/json',
-  'apikey': SUPABASE_KEY,
-  'Authorization': 'Bearer ' + SUPABASE_KEY,
-  'Prefer': 'return=representation'
-};
+// Headers use authToken when available (set by auth.js after login)
+function getHeaders() {
+  const token = (typeof authToken !== 'undefined' && authToken) ? authToken : SUPABASE_KEY;
+  return {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + token,
+    'Prefer': 'return=representation'
+  };
+}
 // ===== PRODUCT CATALOG =====
 const PRODUCTS = {
   sona: [
@@ -73,7 +77,8 @@ function farmerToRow(f) {
     lat: f.lat || null,
     lng: f.lng || null,
     products: f.products || [],
-    date: f.date
+    date: f.date,
+    user_id: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null
   };
 }
 
@@ -101,7 +106,7 @@ function rowToFarmer(r) {
 // ===== SUPABASE REST HELPERS =====
 async function sbFetch(path, method, body) {
   try {
-    const opts = { method, headers: HEADERS };
+    const opts = { method, headers: getHeaders() };
     if (body) opts.body = JSON.stringify(body);
     const res = await fetch(REST_URL + path, opts);
     const text = await res.text();
@@ -934,16 +939,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (e.key === 'Enter') { e.preventDefault(); addCustomCrop(); }
   });
 
-  // Initial dashboard render (empty state while loading)
+  // Initial dashboard render (empty state)
   renderDashboard();
 
-  // Now load data from db (async � UI already works above)
-  showToast('?? Loading data�');
-  await loadFarmers();
-
-  // Re-render dashboard and current page with loaded data
-  renderDashboard();
-  if (currentPage === 'farmers') renderFarmersTable(farmers);
+  // Auth handles data loading — initAuth() called from auth.js after DOM ready
 });
 
 // Make functions global for inline onclick handlers
