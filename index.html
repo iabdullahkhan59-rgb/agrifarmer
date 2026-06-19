@@ -698,6 +698,53 @@
             <!-- Map -->
             <div id="nearbyMap"></div>
 
+            <!-- Route Panel (hidden until a route is active) -->
+            <div class="route-panel hidden" id="routePanel">
+              <div class="route-panel-header">
+                <div class="route-panel-title">
+                  <span class="route-panel-icon">🗺</span>
+                  <div>
+                    <div class="route-destination" id="routeDestName">—</div>
+                    <div class="route-subtitle">Route from your location</div>
+                  </div>
+                </div>
+                <button class="route-close-btn" id="routeCloseBtn" title="Clear route">✕</button>
+              </div>
+              <div class="route-summary">
+                <div class="route-stat">
+                  <span class="route-stat-icon">📏</span>
+                  <div>
+                    <div class="route-stat-value" id="routeDistance">—</div>
+                    <div class="route-stat-label">Road distance</div>
+                  </div>
+                </div>
+                <div class="route-stat-divider"></div>
+                <div class="route-stat">
+                  <span class="route-stat-icon">⏱</span>
+                  <div>
+                    <div class="route-stat-value" id="routeDuration">—</div>
+                    <div class="route-stat-label">Est. travel time</div>
+                  </div>
+                </div>
+                <div class="route-stat-divider"></div>
+                <div class="route-stat">
+                  <span class="route-stat-icon">🚗</span>
+                  <div>
+                    <div class="route-stat-value" id="routeMode">Driving</div>
+                    <div class="route-stat-label">Travel mode</div>
+                  </div>
+                </div>
+                <a class="route-open-maps-btn" id="routeOpenMaps" href="#" target="_blank" rel="noopener">
+                  Open in Maps 🔗
+                </a>
+              </div>
+              <div class="route-steps-toggle" id="routeStepsToggle">
+                <span>▶ Turn-by-turn directions</span>
+                <span class="route-steps-count" id="routeStepsCount"></span>
+              </div>
+              <div class="route-steps hidden" id="routeSteps"></div>
+            </div>
+
             <!-- Results list -->
             <div class="nearby-results hidden" id="nearbyResults">
               <div class="nearby-results-header">
@@ -727,6 +774,12 @@
 
   <!-- Toast -->
   <div class="toast hidden" id="toast"></div>
+
+  <!-- Offline Banner -->
+  <div id="offlineBanner">
+    <span id="offlineBannerText">📵 You're offline — map tiles and routing may be limited</span>
+    <button class="offline-banner-close" onclick="document.getElementById('offlineBanner').classList.remove('show')" title="Dismiss">✕</button>
+  </div>
 
   <!-- All scripts at bottom so DOM is ready -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>

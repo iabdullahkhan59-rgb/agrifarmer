@@ -1249,6 +1249,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   initSidebar();
   initModal();
   initSearch();
+  initRoutePanelEvents();
 
   // Select-all checkbox
   document.getElementById('selectAllChk').addEventListener('change', function() {
@@ -1363,6 +1364,12 @@ let nearbyCircle = null;
 let nearbyUserLat = null;
 let nearbyUserLng = null;
 
+// ===== ROUTING STATE =====
+let routePolyline = null;          // the drawn road line on the map
+let routeStartMarker = null;       // animated start marker
+let routeEndMarker = null;         // destination marker
+let activeRouteFarmerId = null;    // which farmer is currently routed
+
 // Haversine formula ? returns distance in km between two lat/lng points
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371;
@@ -1391,6 +1398,11 @@ function initNearbyMap() {
 function setNearbyUserLocation(lat, lng, source) {
   nearbyUserLat = lat;
   nearbyUserLng = lng;
+
+  // If there was an active route, clear it since origin changed
+  if (activeRouteFarmerId !== null) {
+    clearRoute();
+  }
 
   // Place / move the pulsing "You" marker
   const youIcon = L.divIcon({
@@ -1475,16 +1487,35 @@ function runNearbySearch() {
     const crops = (f.crops || []).join(', ') || '—';
     const totalBags = (f.products || []).reduce((s, p) => s + (p.bags || 0), 0);
     const addrLine = [f.village, f.tehsil, f.district].filter(Boolean).join(', ') || '';
+    const distDisplay = f.distKm < 1
+      ? (f.distKm * 1000).toFixed(0) + ' m away'
+      : f.distKm.toFixed(2) + ' km away';
+    const canRoute = nearbyUserLat !== null;
     const popup = `
-      <div style="min-width:160px">
-        <strong style="font-size:0.95rem">👨‍🌾 ${escHtml(f.name)}</strong><br>
-        <span style="color:#555;font-size:0.82rem">📞 ${escHtml(f.contact)}</span><br>
-        ${addrLine ? `<span style="color:#555;font-size:0.82rem">📍 ${escHtml(addrLine)}</span><br>` : ''}
-        <span style="color:#555;font-size:0.82rem">🌾 ${escHtml(crops)}</span><br>
-        <span style="color:#555;font-size:0.82rem">🧪 ${totalBags} bags total</span><br>
-        <span style="color:${isNear ? '#0a1172' : '#9e9e9e'};font-weight:600;font-size:0.85rem">
-          📏 ${f.distKm.toFixed(2)} km away
-        </span>
+      <div style="min-width:175px;font-family:inherit">
+        <strong style="font-size:0.95rem;display:block;margin-bottom:4px">👨‍🌾 ${escHtml(f.name)}</strong>
+        <div style="color:#555;font-size:0.82rem;line-height:1.7">
+          📞 ${escHtml(f.contact)}<br>
+          ${addrLine ? `📍 ${escHtml(addrLine)}<br>` : ''}
+          🌾 ${escHtml(crops)}<br>
+          🧪 ${totalBags} bags total<br>
+          <span style="color:${isNear ? '#0a1172' : '#9e9e9e'};font-weight:600">
+            📏 ${distDisplay}
+          </span>
+        </div>
+        ${canRoute ? `
+        <div style="margin-top:8px;display:flex;gap:6px">
+          <button onclick="getRouteToFarmer('${f.id}')"
+            style="flex:1;padding:6px 8px;background:#0a1172;color:#fff;border:none;
+                   border-radius:6px;font-size:0.8rem;cursor:pointer;font-weight:600">
+            🗺 Directions
+          </button>
+          <button onclick="viewFarmer('${f.id}')"
+            style="padding:6px 8px;background:none;color:#0a1172;border:1.5px solid #0a1172;
+                   border-radius:6px;font-size:0.8rem;cursor:pointer;font-weight:600">
+            👁 View
+          </button>
+        </div>` : ''}
       </div>`;
     const marker = L.marker([parseFloat(f.lat), parseFloat(f.lng)], { icon: farmerIcon })
       .addTo(nearbyMapInstance)
@@ -1535,7 +1566,7 @@ function renderNearbyList(nearby, radius) {
       ? (f.distKm * 1000).toFixed(0) + ' m'
       : f.distKm.toFixed(2) + ' km';
     return `
-      <div class="nearby-item" onclick="nearbyFlyTo('${f.id}')">
+      <div class="nearby-item ${activeRouteFarmerId === f.id ? 'nearby-item--active-route' : ''}" onclick="nearbyFlyTo('${f.id}')">
         <div class="nearby-rank ${rankClass}">${i + 1}</div>
         <div class="nearby-info">
           <div class="nearby-name">👨‍🌾 ${escHtml(f.name)}</div>
@@ -1551,7 +1582,14 @@ function renderNearbyList(nearby, radius) {
           <span class="nearby-dist-value">${distDisplay}</span>
           <span class="nearby-dist-label">away</span>
         </div>
-        <button class="nearby-action-btn" onclick="event.stopPropagation(); viewFarmer('${f.id}')">👁 View</button>
+        <div class="nearby-item-actions">
+          <button class="nearby-route-btn ${activeRouteFarmerId === f.id ? 'nearby-route-btn--active' : ''}"
+            onclick="event.stopPropagation(); getRouteToFarmer('${f.id}')"
+            title="Get directions">
+            ${activeRouteFarmerId === f.id ? '🔵 Routing…' : '🗺 Route'}
+          </button>
+          <button class="nearby-action-btn" onclick="event.stopPropagation(); viewFarmer('${f.id}')">👁 View</button>
+        </div>
       </div>`;
   }).join('');
 
@@ -1583,5 +1621,384 @@ function nearbyDetectGPS() {
     },
     { enableHighAccuracy: true, timeout: 10000 }
   );
+}
+
+// ===== ROUTING =====
+
+// OSRM turn instruction codes → human-readable with icons
+const OSRM_TURN_ICONS = {
+  'turn-slight-left':  '↙ Slight left',
+  'turn-left':         '← Turn left',
+  'turn-sharp-left':   '↰ Sharp left',
+  'turn-slight-right': '↘ Slight right',
+  'turn-right':        '→ Turn right',
+  'turn-sharp-right':  '↱ Sharp right',
+  'continue':          '↑ Continue',
+  'roundabout':        '🔄 Roundabout',
+  'depart':            '🚦 Start',
+  'arrive':            '🏁 Arrive',
+  'merge':             '↗ Merge',
+  'fork':              '⑂ Fork',
+  'on-ramp':           '↗ On ramp',
+  'off-ramp':          '↘ Off ramp',
+  'end-of-road':       '⊣ End of road',
+  'use-lane':          '→ Use lane',
+  'notification':      'ℹ',
+};
+
+function osrmIcon(maneuver) {
+  if (!maneuver) return '↑';
+  const key = maneuver.modifier
+    ? maneuver.type + '-' + maneuver.modifier
+    : maneuver.type;
+  return OSRM_TURN_ICONS[key] || OSRM_TURN_ICONS[maneuver.type] || '↑ Continue';
+}
+
+function fmtDistance(m) {
+  if (m < 1000) return Math.round(m) + ' m';
+  return (m / 1000).toFixed(1) + ' km';
+}
+
+function fmtDuration(s) {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h > 0) return h + ' hr ' + m + ' min';
+  return m + ' min';
+}
+
+// ===== OFFLINE DETECTION =====
+function isOnline() { return navigator.onLine; }
+
+// ===== STRAIGHT-LINE OFFLINE ROUTE =====
+// Generates a simple offline route object mimicking OSRM structure
+function buildOfflineRoute(oLat, oLng, dLat, dLng, farmerName) {
+  const distM = haversineKm(oLat, oLng, dLat, dLng) * 1000;
+
+  // Cardinal bearing for a human-readable direction
+  function bearing(lat1, lng1, lat2, lng2) {
+    const dLngR = (lng2 - lng1) * Math.PI / 180;
+    const lat1R  = lat1 * Math.PI / 180;
+    const lat2R  = lat2 * Math.PI / 180;
+    const y = Math.sin(dLngR) * Math.cos(lat2R);
+    const x = Math.cos(lat1R) * Math.sin(lat2R) -
+              Math.sin(lat1R) * Math.cos(lat2R) * Math.cos(dLngR);
+    const deg = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    const dirs = ['North','NE','East','SE','South','SW','West','NW'];
+    return dirs[Math.round(deg / 45) % 8];
+  }
+
+  const dir = bearing(oLat, oLng, dLat, dLng);
+  // Estimated drive time: 40 km/h average on rural roads
+  const durationS = (distM / 1000) / 40 * 3600;
+
+  // Straight-line GeoJSON coordinates (just two points)
+  const geometry = {
+    type: 'LineString',
+    coordinates: [[oLng, oLat], [dLng, dLat]]
+  };
+
+  // Synthesise minimal OSRM-like steps
+  const steps = [
+    {
+      maneuver: { type: 'depart', modifier: null },
+      name: `Head ${dir} toward ${farmerName}`,
+      distance: distM,
+      duration: durationS,
+      _offline: true
+    },
+    {
+      maneuver: { type: 'arrive', modifier: null },
+      name: farmerName,
+      distance: 0,
+      duration: 0,
+      _offline: true
+    }
+  ];
+
+  return {
+    distance: distM,
+    duration: durationS,
+    geometry,
+    legs: [{ steps }],
+    _offline: true   // flag so UI can show the offline badge
+  };
+}
+
+async function getRouteToFarmer(farmerId) {
+  if (nearbyUserLat === null) {
+    showToast('Set your location first — use GPS or tap the map', 'error');
+    return;
+  }
+  const f = farmers.find(x => x.id === farmerId);
+  if (!f || !f.lat || !f.lng) {
+    showToast('This farmer has no location saved', 'error');
+    return;
+  }
+
+  // Tap same farmer again → clear route
+  if (activeRouteFarmerId === farmerId) {
+    clearRoute();
+    return;
+  }
+
+  activeRouteFarmerId = farmerId;
+  const online = isOnline();
+
+  setNearbyStatus(
+    online ? '🔍 Calculating road route…' : '📡 Offline — calculating straight-line route…',
+    'info'
+  );
+  document.getElementById('nearbyStatus').classList.remove('hidden');
+
+  const oLat = nearbyUserLat, oLng = nearbyUserLng;
+  const dLat = parseFloat(f.lat), dLng = parseFloat(f.lng);
+
+  let route = null;
+
+  if (online) {
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${oLng},${oLat};${dLng},${dLat}?overview=full&geometries=geojson&steps=true&annotations=false`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Routing service error');
+      const data = await res.json();
+      if (!data.routes || !data.routes.length) throw new Error('No route found');
+      route = data.routes[0];
+    } catch (err) {
+      // Network call failed even though navigator.onLine was true
+      // (e.g. OSRM is down) — fall back to offline route
+      route = buildOfflineRoute(oLat, oLng, dLat, dLng, f.name);
+    }
+  } else {
+    // Fully offline — use straight-line fallback
+    route = buildOfflineRoute(oLat, oLng, dLat, dLng, f.name);
+  }
+
+  drawRoute(route, f);
+  showRoutePanel(route, f);
+
+  // Refresh list to highlight active route card
+  const radius = parseFloat(document.getElementById('nearbyRadius').value);
+  const withCoords = farmers.filter(x => x.lat && x.lng);
+  const withDist = withCoords.map(x => ({
+    ...x,
+    distKm: haversineKm(nearbyUserLat, nearbyUserLng, parseFloat(x.lat), parseFloat(x.lng))
+  })).sort((a, b) => a.distKm - b.distKm);
+  renderNearbyList(withDist.filter(x => x.distKm <= radius), radius);
+
+  const offlineNote = route._offline ? ' (straight-line, offline)' : '';
+  setNearbyStatus(
+    `✅ Route to ${f.name} — ${fmtDistance(route.distance)}, ${fmtDuration(route.duration)}${offlineNote}`,
+    'found'
+  );
+}
+
+function drawRoute(route, farmer) {
+  clearRoutePolyline();
+
+  const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+  const isOffline = !!route._offline;
+
+  if (isOffline) {
+    // Offline: dashed amber straight line with animated pulse
+    routePolyline = L.layerGroup([
+      L.polyline(coords, {
+        color: 'rgba(245,124,0,0.2)',
+        weight: 12,
+        lineCap: 'round'
+      }),
+      L.polyline(coords, {
+        color: '#f57c00',
+        weight: 4,
+        lineCap: 'round',
+        dashArray: '10 8',
+        dashOffset: '0'
+      }),
+      L.polyline(coords, {
+        color: '#fff',
+        weight: 1.5,
+        lineCap: 'round',
+        opacity: 0.6,
+        dashArray: '10 8'
+      })
+    ]).addTo(nearbyMapInstance);
+  } else {
+    // Online: solid navy road line
+    routePolyline = L.layerGroup([
+      L.polyline(coords, {
+        color: 'rgba(10,17,114,0.15)',
+        weight: 10,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }),
+      L.polyline(coords, {
+        color: '#0a1172',
+        weight: 5,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }),
+      L.polyline(coords, {
+        color: '#fff',
+        weight: 2,
+        lineCap: 'round',
+        lineJoin: 'round',
+        opacity: 0.5
+      })
+    ]).addTo(nearbyMapInstance);
+  }
+
+  // Animated destination marker
+  const destIcon = L.divIcon({
+    className: '',
+    html: `<div class="route-dest-marker">
+      <div class="route-dest-pin"></div>
+      <div class="route-dest-label">${escHtml(farmer.name)}</div>
+    </div>`,
+    iconSize: [120, 48],
+    iconAnchor: [12, 40]
+  });
+
+  if (routeEndMarker) nearbyMapInstance.removeLayer(routeEndMarker);
+  routeEndMarker = L.marker([parseFloat(farmer.lat), parseFloat(farmer.lng)], {
+    icon: destIcon,
+    zIndexOffset: 900
+  }).addTo(nearbyMapInstance);
+
+  // Fit map to show full route with padding
+  const bounds = L.latLngBounds(coords);
+  nearbyMapInstance.fitBounds(bounds, { padding: [50, 50] });
+}
+
+function showRoutePanel(route, farmer) {
+  const panel = document.getElementById('routePanel');
+  const isOffline = !!route._offline;
+
+  document.getElementById('routeDestName').textContent = farmer.name;
+  document.getElementById('routeDistance').textContent = fmtDistance(route.distance);
+  document.getElementById('routeDuration').textContent = fmtDuration(route.duration);
+  document.getElementById('routeMode').textContent = 'Driving';
+
+  // Distance label — clarify offline is straight-line
+  const distLabel = panel.querySelector('.route-stat:first-child .route-stat-label');
+  if (distLabel) distLabel.textContent = isOffline ? 'Straight-line dist.' : 'Road distance';
+
+  // Offline badge
+  let badge = panel.querySelector('.route-offline-badge');
+  if (isOffline) {
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.className = 'route-offline-badge';
+      badge.innerHTML = '📵 Offline mode — straight-line route (approximate)';
+      panel.querySelector('.route-panel-header').after(badge);
+    }
+  } else {
+    if (badge) badge.remove();
+  }
+
+  // Google Maps deep-link as online fallback
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${nearbyUserLat},${nearbyUserLng}&destination=${farmer.lat},${farmer.lng}&travelmode=driving`;
+  const gmapsEl = document.getElementById('routeOpenMaps');
+  gmapsEl.href = mapsUrl;
+  gmapsEl.textContent = isOffline ? 'Open Maps when online 🔗' : 'Open in Maps 🔗';
+
+  // Build turn-by-turn steps
+  const steps = route.legs.flatMap(leg => leg.steps);
+  document.getElementById('routeStepsCount').textContent = steps.length + ' steps';
+
+  const stepsEl = document.getElementById('routeSteps');
+  stepsEl.innerHTML = steps.map((step, i) => {
+    const icon = osrmIcon(step.maneuver);
+    const streetName = step.name ? escHtml(step.name) : '<em style="color:#999">Unnamed road</em>';
+    const dist = fmtDistance(step.distance);
+    const isFirst = i === 0;
+    const isLast = i === steps.length - 1;
+    return `
+      <div class="route-step ${isFirst ? 'route-step--first' : ''} ${isLast ? 'route-step--last' : ''}">
+        <div class="route-step-icon">${icon.split(' ')[0]}</div>
+        <div class="route-step-body">
+          <div class="route-step-instruction">${icon.slice(icon.indexOf(' ')+1)} ${streetName}</div>
+          ${!isLast ? `<div class="route-step-dist">${dist}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  panel.classList.remove('hidden');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function clearRoute() {
+  clearRoutePolyline();
+  activeRouteFarmerId = null;
+
+  // Hide panel
+  document.getElementById('routePanel').classList.add('hidden');
+
+  // Collapse steps
+  document.getElementById('routeSteps').classList.add('hidden');
+  const toggle = document.getElementById('routeStepsToggle');
+  toggle.querySelector('span').textContent = '▶ Turn-by-turn directions';
+
+  // Re-render list without active state
+  const radius = parseFloat(document.getElementById('nearbyRadius').value);
+  if (nearbyUserLat !== null) {
+    const withCoords = farmers.filter(f => f.lat && f.lng);
+    const withDist = withCoords.map(f => ({
+      ...f,
+      distKm: haversineKm(nearbyUserLat, nearbyUserLng, parseFloat(f.lat), parseFloat(f.lng))
+    })).sort((a, b) => a.distKm - b.distKm);
+    const nearby = withDist.filter(f => f.distKm <= radius);
+    renderNearbyList(nearby, radius);
+    setNearbyStatus(`✅ Found ${nearby.length} farmer${nearby.length !== 1 ? 's' : ''} within ${radius} km`, 'found');
+  }
+}
+
+function clearRoutePolyline() {
+  if (routePolyline) { nearbyMapInstance.removeLayer(routePolyline); routePolyline = null; }
+  if (routeEndMarker) { nearbyMapInstance.removeLayer(routeEndMarker); routeEndMarker = null; }
+}
+
+// Route panel wiring — called from main DOMContentLoaded init
+function initRoutePanelEvents() {
+  const toggle = document.getElementById('routeStepsToggle');
+  if (toggle) {
+    toggle.addEventListener('click', () => {
+      const stepsEl = document.getElementById('routeSteps');
+      const isHidden = stepsEl.classList.toggle('hidden');
+      toggle.querySelector('span').textContent = isHidden
+        ? '▶ Turn-by-turn directions'
+        : '▼ Turn-by-turn directions';
+    });
+  }
+  const closeBtn = document.getElementById('routeCloseBtn');
+  if (closeBtn) closeBtn.addEventListener('click', clearRoute);
+
+  // ===== ONLINE / OFFLINE BANNER =====
+  const banner = document.getElementById('offlineBanner');
+  const bannerText = document.getElementById('offlineBannerText');
+
+  function showOfflineBanner() {
+    banner.classList.remove('online');
+    bannerText.textContent = '📵 You\'re offline — map tiles served from cache, routing is approximate';
+    banner.classList.add('show');
+  }
+
+  function showOnlineBanner() {
+    banner.classList.add('online');
+    bannerText.textContent = '✅ Back online — full routing and live map tiles restored';
+    banner.classList.add('show');
+    // Auto-dismiss after 3 s
+    setTimeout(() => banner.classList.remove('show'), 3000);
+    // If there's an active offline route, silently re-fetch the real route
+    if (activeRouteFarmerId !== null) {
+      const fid = activeRouteFarmerId;
+      activeRouteFarmerId = null; // reset so getRoute runs fresh
+      getRouteToFarmer(fid);
+    }
+  }
+
+  window.addEventListener('offline', showOfflineBanner);
+  window.addEventListener('online', showOnlineBanner);
+
+  // Show banner immediately if already offline on page load
+  if (!navigator.onLine) showOfflineBanner();
 }
 
