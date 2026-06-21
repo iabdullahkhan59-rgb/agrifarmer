@@ -969,6 +969,12 @@ function handleFileUpload(file) {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
       if (!rows.length) { showToast('No data found in file', 'error'); return; }
+
+      // Log exact column names to console for debugging
+      const cols = Object.keys(rows[0]);
+      console.log('[Upload] Exact column names in your Excel file:');
+      cols.forEach((c, i) => console.log(`  [${i}] "${c}"  →  normalized: "${c.toLowerCase().replace(/[^a-z0-9]/g, '')}"`));
+
       parsedUploadRows = rows;
       showUploadPreview(rows);
     } catch(err) {
@@ -1142,6 +1148,17 @@ async function importUploadedData() {
   if (!COL.name) {
     showToast('Cannot import — Farmer Name column not mapped. Please assign it in the column mapper.', 'error');
     return;
+  }
+
+  // Safety check: warn if location/GPS columns couldn't be resolved
+  const missing = [];
+  if (!COL.village)  missing.push('Village/Mauza');
+  if (!COL.tehsil)   missing.push('Tehsil');
+  if (!COL.district) missing.push('District');
+  if (!COL.lat)      missing.push('Latitude');
+  if (!COL.lng)      missing.push('Longitude');
+  if (missing.length) {
+    console.warn('[Import] Could not map these columns (will be blank):', missing);
   }
 
   const getVal = (row, colKey) => {
