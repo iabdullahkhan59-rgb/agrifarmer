@@ -20,11 +20,23 @@ function authFetch(path, method, body) {
     headers: { ...AUTH_HEADERS, ...(authToken ? { 'Authorization': 'Bearer ' + authToken } : {}) }
   };
   if (body) opts.body = JSON.stringify(body);
-  return fetch(AUTH_URL + path, opts).then(async res => {
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) return { data: null, error: data };
-    return { data, error: null };
-  });
+
+  // 8-second timeout so a slow/unreachable server never hangs the splash
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  opts.signal = controller.signal;
+
+  return fetch(AUTH_URL + path, opts)
+    .then(async res => {
+      clearTimeout(timer);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { data: null, error: data };
+      return { data, error: null };
+    })
+    .catch(err => {
+      clearTimeout(timer);
+      return { data: null, error: { message: err.name === 'AbortError' ? 'Request timed out' : err.message } };
+    });
 }
 
 function saveSession(session) {
@@ -230,13 +242,25 @@ function onAuthSuccess() {
 
 // ===== INIT AUTH =====
 async function initAuth() {
-  const hasSession = loadSession();
-  if (hasSession) {
-    // Verify token in background — splash stays visible during this
-    const valid = await verifySession();
+  // Hard safety net — splash can never stay visible more than 10 seconds
+  const splashGuard = setTimeout(() => {
     hideSplash();
-    if (valid) { onAuthSuccess(); return; }
-  } else {
+    showAuthScreen('signin');
+  }, 10000);
+
+  try {
+    const hasSession = loadSession();
+    if (hasSession) {
+      const valid = await verifySession();
+      clearTimeout(splashGuard);
+      hideSplash();
+      if (valid) { onAuthSuccess(); return; }
+    } else {
+      clearTimeout(splashGuard);
+      hideSplash();
+    }
+  } catch (e) {
+    clearTimeout(splashGuard);
     hideSplash();
   }
   showAuthScreen('signin');
