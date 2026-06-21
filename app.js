@@ -979,21 +979,122 @@ function handleFileUpload(file) {
 }
 
 function showUploadPreview(rows) {
-  const preview = rows.slice(0, 10);
+  const preview = rows.slice(0, 5);
   const headers = Object.keys(rows[0]);
 
-  // Show detected columns and what they map to
+  // Same safe resolution logic as importUploadedData
   const norm = str => String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
-  const FIELD_MAP = {
-    'Farmer Name':   ['farmername','name','farmer','fullname'],
-    'Contact':       ['contactnumber','contact','phone','mobile','tel','phonenumber','cellnumber','mobilenumber'],
-    'Dealer':        ['dealername','dealer','dealershop','agentname'],
-    'Land Area':     ['totallandarea','landarea','landareaacres','land','acres','area'],
-    'Crops':         ['croppattern','crops','crop','cultivation'],
-    'Village/Mauza': ['villagemauza','village','mauza','villagename','locality'],
-    'Tehsil':        ['tehsil','taluka','taluqa','tehsilname'],
-    'District':      ['district','districtname','zila'],
-    'Province':      ['province','provincename','state'],
+  const normKeys = headers.map(k => ({ orig: k, norm: norm(k) }));
+
+  const resolveCol = (aliases) => {
+    for (const alias of aliases) {
+      const na = norm(alias);
+      const hit = normKeys.find(k => k.norm === na);
+      if (hit) return hit.orig;
+    }
+    for (const alias of aliases) {
+      const na = norm(alias);
+      if (na.length < 5) continue;
+      const hit = normKeys.find(k => k.norm.includes(na));
+      if (hit) return hit.orig;
+    }
+    return null;
+  };
+
+  // App fields and their aliases (same as importUploadedData)
+  const APP_FIELDS = [
+    { key: 'name',     label: 'Farmer Name ★', aliases: ['farmername','name','farmer name','fullname','farmer'], required: true },
+    { key: 'contact',  label: 'Contact',        aliases: ['contactnumber','contact number','phone number','mobile number','mobilenumber','phonenumber','contact','phone','mobile','tel','cell'] },
+    { key: 'dealer',   label: 'Dealer',         aliases: ['dealername','dealer name','dealer','agentname','agent'] },
+    { key: 'landArea', label: 'Land Area',      aliases: ['totallandarea','total land area','land area acres','landarea','land area','landareaacres','acres','land'] },
+    { key: 'crops',    label: 'Crops',          aliases: ['croppattern','crop pattern','crops','crop','cultivation'] },
+    { key: 'village',  label: 'Village / Mauza',aliases: ['villagemauza','village mauza','village/mauza','mauza','villagename','village name','village','locality','basti'] },
+    { key: 'tehsil',   label: 'Tehsil',         aliases: ['tehsilname','tehsil name','tehsil','taluka','taluqa','taluk'] },
+    { key: 'district', label: 'District',       aliases: ['districtname','district name','district','zila','zilaname'] },
+    { key: 'province', label: 'Province',       aliases: ['provincename','province name','province','state'] },
+    { key: 'lat',      label: 'Latitude',       aliases: ['latitude','lat'] },
+    { key: 'lng',      label: 'Longitude',      aliases: ['longitude','long','lng'] },
+  ];
+
+  // Resolve each app field to a column
+  const resolved = {};
+  APP_FIELDS.forEach(f => { resolved[f.key] = resolveCol(f.aliases); });
+
+  const unmatched = APP_FIELDS.filter(f => !resolved[f.key] && f.required);
+  const allGood = APP_FIELDS.filter(f => f.required).every(f => resolved[f.key]);
+
+  // Build the mapping table — each row is a dropdown so user can fix mismatches
+  const blankOption = `<option value="">— not mapped —</option>`;
+  const colOptions = headers.map(h => `<option value="${escHtml(h)}">${escHtml(h)}</option>`).join('');
+
+  const mappingRows = APP_FIELDS.map(f => {
+    const cur = resolved[f.key] || '';
+    const opts = headers.map(h =>
+      `<option value="${escHtml(h)}" ${h === cur ? 'selected' : ''}>${escHtml(h)}</option>`
+    ).join('');
+    const badge = cur
+      ? `<span class="mapping-status mapping-status--ok">✓</span>`
+      : `<span class="mapping-status mapping-status--miss">${f.required ? '★ required' : '—'}</span>`;
+    return `
+      <tr class="mapping-tr ${cur ? '' : (f.required ? 'mapping-tr--warn' : 'mapping-tr--none')}">
+        <td class="mapping-field-label">${escHtml(f.label)}</td>
+        <td>${badge}</td>
+        <td>
+          <select class="col-assign-select" data-field="${f.key}">
+            ${blankOption}${opts}
+          </select>
+        </td>
+      </tr>`;
+  }).join('');
+
+  const mappingHtml = `
+    <div class="upload-mapping">
+      <div class="upload-mapping-title">📋 Column mapping — ${rows.length} rows detected</div>
+      <p style="font-size:0.82rem;color:var(--text-muted);margin:0 0 10px">
+        Auto-detected below. Use the dropdowns to fix any wrong or missing mappings before importing.
+      </p>
+      <table class="mapping-table">
+        <thead><tr><th>App Field</th><th></th><th>Your Excel Column</th></tr></thead>
+        <tbody>${mappingRows}</tbody>
+      </table>
+      ${allGood
+        ? `<div class="mapping-ok" style="margin-top:10px">✅ All required columns mapped — ready to import</div>`
+        : `<div class="mapping-warn" style="margin-top:10px">⚠️ <strong>Farmer Name</strong> column not detected. Please assign it above before importing.</div>`}
+    </div>`;
+
+  // Data preview (first 5 rows)
+  const tableHtml = `
+    <div style="overflow-x:auto;margin-top:14px">
+      <div style="font-size:0.82rem;font-weight:600;color:var(--text-muted);margin-bottom:6px">Preview (first ${preview.length} rows)</div>
+      <table class="data-table" style="font-size:0.78rem">
+        <thead><tr>${headers.map(h => `<th>${escHtml(h)}</th>`).join('')}</tr></thead>
+        <tbody>${preview.map(row =>
+          '<tr>' + headers.map(h => `<td>${escHtml(String(row[h]))}</td>`).join('') + '</tr>'
+        ).join('')}</tbody>
+      </table>
+    </div>`;
+
+  document.getElementById('previewTableWrapper').innerHTML = mappingHtml + tableHtml;
+  document.getElementById('uploadPreview').classList.remove('hidden');
+
+  // When user changes a dropdown, update parsedColAssignment
+  document.querySelectorAll('.col-assign-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      // collect all current assignments into a global object
+      window._colAssignment = {};
+      document.querySelectorAll('.col-assign-select').forEach(s => {
+        if (s.value) window._colAssignment[s.dataset.field] = s.value;
+      });
+    });
+    // Init from auto-resolved
+    if (resolved[sel.dataset.field]) sel.value = resolved[sel.dataset.field];
+  });
+  // Initialise global assignment from auto-resolved
+  window._colAssignment = {};
+  APP_FIELDS.forEach(f => { if (resolved[f.key]) window._colAssignment[f.key] = resolved[f.key]; });
+
+  showToast('File loaded — ' + rows.length + ' rows. Check the column mapping below.', 'success');
+}
     'Latitude':      ['latitude','lat'],
     'Longitude':     ['longitude','lng','long'],
   };
@@ -1048,43 +1149,73 @@ function showUploadPreview(rows) {
 async function importUploadedData() {
   if (!parsedUploadRows.length) return;
   let imported = 0;
+
+  // Use the column assignment from the preview UI (user may have corrected it)
+  // Fall back to auto-resolving if preview was skipped somehow
+  const norm = str => String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const colKeys = Object.keys(parsedUploadRows[0]);
+  const normKeys = colKeys.map(k => ({ orig: k, norm: norm(k) }));
+
+  const resolveCol = (aliases) => {
+    for (const alias of aliases) {
+      const na = norm(alias);
+      const hit = normKeys.find(k => k.norm === na);
+      if (hit) return hit.orig;
+    }
+    for (const alias of aliases) {
+      const na = norm(alias);
+      if (na.length < 5) continue;
+      const hit = normKeys.find(k => k.norm.includes(na));
+      if (hit) return hit.orig;
+    }
+    return null;
+  };
+
+  // Prefer user's manual assignment from dropdowns, fall back to auto-resolve
+  const assign = window._colAssignment || {};
+  const COL = {
+    name:     assign.name     || resolveCol(['farmername','name','farmer name','fullname','farmer']),
+    contact:  assign.contact  || resolveCol(['contactnumber','contact number','phone number','mobile number','mobilenumber','phonenumber','contact','phone','mobile','tel','cell']),
+    dealer:   assign.dealer   || resolveCol(['dealername','dealer name','dealer','agentname','agent']),
+    landArea: assign.landArea || resolveCol(['totallandarea','total land area','land area acres','landarea','land area','landareaacres','acres','land']),
+    crops:    assign.crops    || resolveCol(['croppattern','crop pattern','crops','crop','cultivation']),
+    village:  assign.village  || resolveCol(['villagemauza','village mauza','village/mauza','mauza','villagename','village name','village','locality','basti']),
+    tehsil:   assign.tehsil   || resolveCol(['tehsilname','tehsil name','tehsil','taluka','taluqa','taluk']),
+    district: assign.district || resolveCol(['districtname','district name','district','zila','zilaname']),
+    province: assign.province || resolveCol(['provincename','province name','province','state']),
+    lat:      assign.lat      || resolveCol(['latitude','lat']),
+    lng:      assign.lng      || resolveCol(['longitude','long','lng']),
+  };
+
+  console.log('[Import] Final column mapping:', COL);
+
+  if (!COL.name) {
+    showToast('Cannot import — Farmer Name column not mapped. Please assign it in the column mapper.', 'error');
+    return;
+  }
+
+  const getVal = (row, colKey) => {
+    if (!colKey) return '';
+    const v = row[colKey];
+    if (v === undefined || v === null || v === '') return '';
+    return String(v).trim();
+  };
+
   parsedUploadRows.forEach(row => {
-    // Normalize a key: lowercase, strip ALL non-alphanumeric chars
-    const norm = str => String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
-
-    // Build a normalized lookup map once per row
-    const normMap = {};
-    Object.keys(row).forEach(k => { normMap[norm(k)] = row[k]; });
-
-    // Get value by trying multiple alias keys (all normalized)
-    const get = (keys) => {
-      for (const k of keys) {
-        const nk = norm(k);
-        if (normMap[nk] !== undefined && normMap[nk] !== '') return String(normMap[nk]).trim();
-      }
-      // Fuzzy fallback: find any key that CONTAINS one of the alias words
-      for (const k of keys) {
-        const nk = norm(k);
-        const found = Object.keys(normMap).find(rk => rk.includes(nk) || nk.includes(rk));
-        if (found && normMap[found] !== '') return String(normMap[found]).trim();
-      }
-      return '';
-    };
-
-    const name     = get(['farmername','name','farmer','fullname']);
-    const contact  = get(['contactnumber','contact','phone','mobile','tel','phonenumber','cellnumber','mobilenumber']);
-    const dealer   = get(['dealername','dealer','dealershop','agentname']);
-    const landArea = parseFloat(get(['totallandarea','landarea','landareaacres','land','acres','area'])) || 0;
-    const cropsRaw = get(['croppattern','crops','crop','cultivation']);
+    const name     = getVal(row, COL.name);
+    const contact  = getVal(row, COL.contact);
+    const dealer   = getVal(row, COL.dealer);
+    const landArea = parseFloat(getVal(row, COL.landArea)) || 0;
+    const cropsRaw = getVal(row, COL.crops);
     const crops    = cropsRaw ? cropsRaw.split(/[,;\/|]/).map(c => c.trim()).filter(Boolean) : [];
-    const lat      = parseFloat(get(['latitude','lat'])) || null;
-    const lng      = parseFloat(get(['longitude','lng','long'])) || null;
-    const village  = get(['villagemauza','village','mauza','villagename','locality']);
-    const tehsil   = get(['tehsil','taluka','taluqa','tehsilname']);
-    const district = get(['district','districtname','zila']);
-    const province = get(['province','provincename','state']);
+    const lat      = parseFloat(getVal(row, COL.lat)) || null;
+    const lng      = parseFloat(getVal(row, COL.lng)) || null;
+    const village  = getVal(row, COL.village);
+    const tehsil   = getVal(row, COL.tehsil);
+    const district = getVal(row, COL.district);
+    const province = getVal(row, COL.province);
 
-    if (!name) return; // skip rows without a name
+    if (!name) return;
     const farmer = {
       id: 'f_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
       name, contact, dealer, landArea, crops,
