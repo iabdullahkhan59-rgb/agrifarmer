@@ -168,7 +168,11 @@ async function loadFarmers() {
   const { data, error } = await sbFetch('/farmers?order=date.asc', 'GET');
   if (error) {
     console.error('[Supabase] Load error:', error);
-    try { farmers = JSON.parse(localStorage.getItem('agritrack_farmers') || '[]'); } catch(e) { farmers = []; }
+    try {
+      farmers = JSON.parse(localStorage.getItem('agritrack_farmers') || '[]');
+      // Keep localStorage data in the same order as Supabase would return
+      farmers.sort((a, b) => new Date(a.date) - new Date(b.date));
+    } catch(e) { farmers = []; }
   } else {
     console.log('%c[Supabase] Loaded ' + (data||[]).length + ' farmers', 'color:green;font-weight:bold');
     farmers = (data || []).map(rowToFarmer);
@@ -447,6 +451,8 @@ async function handleFormSubmit(e) {
   } else {
     farmers.push(farmer);
   }
+  // Re-sort to match Supabase's date.asc order so the table position is stable
+  farmers.sort((a, b) => new Date(a.date) - new Date(b.date));
   const submitBtn = document.getElementById('submitFormBtn');
   submitBtn.disabled = true;
   submitBtn.textContent = '? Saving?';
@@ -1023,6 +1029,8 @@ async function importUploadedData() {
     farmers.push(farmer);
     imported++;
   });
+  // Sort to keep consistent date.asc order
+  farmers.sort((a, b) => new Date(a.date) - new Date(b.date));
   const confirmBtn = document.getElementById('confirmUploadBtn');
   confirmBtn.disabled = true;
   confirmBtn.textContent = '? Syncing?';
