@@ -1010,16 +1010,17 @@ function showUploadPreview(rows) {
   // App fields and their aliases (same as importUploadedData)
   const APP_FIELDS = [
     { key: 'name',     label: 'Farmer Name ★', aliases: ['farmername','name','farmer name','fullname','farmer'], required: true },
-    { key: 'contact',  label: 'Contact',        aliases: ['contactnumber','contact number','phone number','mobile number','mobilenumber','phonenumber','contact','phone','mobile','tel','cell'] },
+    { key: 'contact',  label: 'Contact',        aliases: ['contactno','contact no','contactnumber','contact number','phone number','mobile number','mobilenumber','phonenumber','contact','phone','mobile','tel','cell'] },
     { key: 'dealer',   label: 'Dealer',         aliases: ['dealername','dealer name','dealer','agentname','agent'] },
-    { key: 'landArea', label: 'Land Area',      aliases: ['totallandarea','total land area','land area acres','landarea','land area','landareaacres','acres','land'] },
-    { key: 'crops',    label: 'Crops',          aliases: ['croppattern','crop pattern','crops','crop','cultivation'] },
-    { key: 'village',  label: 'Village / Mauza',aliases: ['villagemauza','village mauza','village/mauza','mauza','villagename','village name','village','locality','basti'] },
+    { key: 'landArea', label: 'Land Area',      aliases: ['areaacre','area acre','areainacre','totallandarea','total land area','land area acres','landarea','land area','landareaacres','acres','area','land'] },
+    { key: 'crops',    label: 'Crops',          aliases: ['cropplan','crop plan','croppattern','crop pattern','crops','crop','cultivation'] },
+    { key: 'village',  label: 'Village / Address', aliases: ['address','villagemauza','village mauza','village/mauza','mauza','villagename','village name','village','locality','basti'] },
     { key: 'tehsil',   label: 'Tehsil',         aliases: ['tehsilname','tehsil name','tehsil','taluka','taluqa','taluk'] },
-    { key: 'district', label: 'District',       aliases: ['districtname','district name','district','zila','zilaname'] },
+    { key: 'district', label: 'District / Region', aliases: ['region','districtname','district name','district','zila','zilaname'] },
     { key: 'province', label: 'Province',       aliases: ['provincename','province name','province','state'] },
     { key: 'lat',      label: 'Latitude',       aliases: ['latitude','lat'] },
     { key: 'lng',      label: 'Longitude',      aliases: ['longitude','long','lng'] },
+    { key: 'location', label: 'Location (lat,lng combined)', aliases: ['location','gps','coordinates','coords','latlng','latlong'] },
   ];
 
   // Resolve each app field to a column
@@ -1131,16 +1132,17 @@ async function importUploadedData() {
   const assign = window._colAssignment || {};
   const COL = {
     name:     assign.name     || resolveCol(['farmername','name','farmer name','fullname','farmer']),
-    contact:  assign.contact  || resolveCol(['contactnumber','contact number','phone number','mobile number','mobilenumber','phonenumber','contact','phone','mobile','tel','cell']),
+    contact:  assign.contact  || resolveCol(['contactno','contact no','contactnumber','contact number','phone number','mobile number','mobilenumber','phonenumber','contact','phone','mobile','tel','cell']),
     dealer:   assign.dealer   || resolveCol(['dealername','dealer name','dealer','agentname','agent']),
-    landArea: assign.landArea || resolveCol(['totallandarea','total land area','land area acres','landarea','land area','landareaacres','acres','land']),
-    crops:    assign.crops    || resolveCol(['croppattern','crop pattern','crops','crop','cultivation']),
-    village:  assign.village  || resolveCol(['villagemauza','village mauza','village/mauza','mauza','villagename','village name','village','locality','basti']),
+    landArea: assign.landArea || resolveCol(['areaacre','area acre','areainacre','totallandarea','total land area','land area acres','landarea','land area','landareaacres','acres','area','land']),
+    crops:    assign.crops    || resolveCol(['cropplan','crop plan','croppattern','crop pattern','crops','crop','cultivation']),
+    village:  assign.village  || resolveCol(['address','villagemauza','village mauza','village/mauza','mauza','villagename','village name','village','locality','basti']),
     tehsil:   assign.tehsil   || resolveCol(['tehsilname','tehsil name','tehsil','taluka','taluqa','taluk']),
-    district: assign.district || resolveCol(['districtname','district name','district','zila','zilaname']),
+    district: assign.district || resolveCol(['region','districtname','district name','district','zila','zilaname']),
     province: assign.province || resolveCol(['provincename','province name','province','state']),
     lat:      assign.lat      || resolveCol(['latitude','lat']),
     lng:      assign.lng      || resolveCol(['longitude','long','lng']),
+    location: assign.location || resolveCol(['location','gps','coordinates','coords','latlng','latlong']),
   };
 
   console.log('[Import] Final column mapping:', COL);
@@ -1175,12 +1177,22 @@ async function importUploadedData() {
     const landArea = parseFloat(getVal(row, COL.landArea)) || 0;
     const cropsRaw = getVal(row, COL.crops);
     const crops    = cropsRaw ? cropsRaw.split(/[,;\/|]/).map(c => c.trim()).filter(Boolean) : [];
-    const lat      = parseFloat(getVal(row, COL.lat)) || null;
-    const lng      = parseFloat(getVal(row, COL.lng)) || null;
     const village  = getVal(row, COL.village);
     const tehsil   = getVal(row, COL.tehsil);
     const district = getVal(row, COL.district);
     const province = getVal(row, COL.province);
+
+    // GPS: try dedicated lat/lng columns first, then parse combined Location column
+    let lat = parseFloat(getVal(row, COL.lat)) || null;
+    let lng = parseFloat(getVal(row, COL.lng)) || null;
+    if ((!lat || !lng) && COL.location) {
+      const locRaw = getVal(row, COL.location);
+      if (locRaw) {
+        // Support formats: "30.1234, 72.5678" | "30.1234,72.5678" | "30.1234 72.5678"
+        const parts = locRaw.split(/[\s,;]+/).map(p => parseFloat(p)).filter(n => !isNaN(n));
+        if (parts.length >= 2) { lat = parts[0]; lng = parts[1]; }
+      }
+    }
 
     if (!name) return;
     const farmer = {
