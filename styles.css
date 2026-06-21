@@ -1342,3 +1342,71 @@ tr.row-selected td { border-color: #c7d2fe; }
   padding: 0 4px; line-height: 1;
 }
 .offline-banner-close:hover { opacity: 1; }
+
+/* ===== UPLOAD COLUMN MAPPING PANEL ===== */
+.upload-mapping {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.upload-mapping-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+  color: var(--primary);
+}
+.upload-mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.mapping-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+}
+.mapping-row--matched {
+  background: rgba(10,17,114,0.06);
+}
+.mapping-row--unmatched {
+  background: #fff3e0;
+  color: #bf360c;
+}
+.mapping-col-name {
+  font-weight: 600;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mapping-arrow { color: var(--text-muted); flex-shrink: 0; }
+.mapping-field {
+  color: var(--primary);
+  font-weight: 500;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.mapping-row--unmatched .mapping-field { color: #bf360c; }
+
+.mapping-warn {
+  background: #fff3e0;
+  border: 1px solid #ffcc80;
+  border-radius: 5px;
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  color: #e65100;
+}
+.mapping-ok {
+  background: var(--success-light);
+  border: 1px solid #9fa8da;
+  border-radius: 5px;
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  color: var(--success);
+}
