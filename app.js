@@ -1095,56 +1095,6 @@ function showUploadPreview(rows) {
 
   showToast('File loaded — ' + rows.length + ' rows. Check the column mapping below.', 'success');
 }
-    'Latitude':      ['latitude','lat'],
-    'Longitude':     ['longitude','lng','long'],
-  };
-
-  // Figure out which app field each Excel column maps to
-  const matched = {};
-  headers.forEach(h => {
-    const nh = norm(h);
-    for (const [field, aliases] of Object.entries(FIELD_MAP)) {
-      for (const alias of aliases) {
-        if (nh === alias || nh.includes(alias) || alias.includes(nh)) {
-          matched[h] = field;
-          break;
-        }
-      }
-      if (matched[h]) break;
-    }
-    if (!matched[h]) matched[h] = '—';
-  });
-
-  const missingRequired = ['Farmer Name'].filter(f =>
-    !Object.values(matched).includes(f)
-  );
-
-  const mappingHtml = `
-    <div class="upload-mapping">
-      <div class="upload-mapping-title">📋 Column mapping detected (${headers.length} columns)</div>
-      <div class="upload-mapping-grid">
-        ${headers.map(h => `
-          <div class="mapping-row ${matched[h] === '—' ? 'mapping-row--unmatched' : 'mapping-row--matched'}">
-            <span class="mapping-col-name">${escHtml(h)}</span>
-            <span class="mapping-arrow">→</span>
-            <span class="mapping-field">${matched[h]}</span>
-          </div>`).join('')}
-      </div>
-      ${missingRequired.length ? `<div class="mapping-warn">⚠️ Could not detect: <strong>${missingRequired.join(', ')}</strong>. Rows without a farmer name will be skipped.</div>` : `<div class="mapping-ok">✅ All required columns detected</div>`}
-    </div>`;
-
-  const tableHtml = `
-    <table class="data-table">
-      <thead><tr>${headers.map(h => '<th>' + escHtml(h) + '</th>').join('')}</tr></thead>
-      <tbody>${preview.map(row =>
-        '<tr>' + headers.map(h => '<td>' + escHtml(String(row[h])) + '</td>').join('') + '</tr>'
-      ).join('')}</tbody>
-    </table>`;
-
-  document.getElementById('previewTableWrapper').innerHTML = mappingHtml + tableHtml;
-  document.getElementById('uploadPreview').classList.remove('hidden');
-  showToast('File loaded: ' + rows.length + ' records found', 'success');
-}
 
 async function importUploadedData() {
   if (!parsedUploadRows.length) return;
