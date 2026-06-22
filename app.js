@@ -490,7 +490,7 @@ function updateBulkBar() {
 function renderFarmersTable(data) {
   const tbody = document.getElementById('farmersTableBody');
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="empty-state">No farmers found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="empty-state">No farmers found.</td></tr>';
     updateBulkBar();
     return;
   }
@@ -500,6 +500,17 @@ function renderFarmersTable(data) {
     const crops = (f.crops || []).map(c => `<span class="badge badge-green">${c}</span>`).join('');
     const date = f.date ? new Date(f.date).toLocaleDateString('en-PK') : '\u2014';
     const checked = selectedFarmerIds.has(f.id) ? 'checked' : '';
+
+    // Product summary: show each product with bags and its dealer
+    const products = (f.products || []).filter(p => p.bags > 0);
+    const productSummary = products.length
+      ? products.map(p => {
+          const unit = p.unit || 'bags';
+          const dealerTag = p.dealer ? ` <span class="prod-dealer-tag">${escHtml(p.dealer)}</span>` : '';
+          return `<div class="prod-summary-row"><span class="prod-summary-name">${escHtml(p.name)}</span><span class="prod-summary-qty">${p.bags} ${unit}</span>${dealerTag}</div>`;
+        }).join('')
+      : '<span style="color:#bbb;font-size:0.78rem">—</span>';
+
     return `<tr class="${selectedFarmerIds.has(f.id) ? 'row-selected' : ''}">
       <td><input type="checkbox" class="row-chk" data-id="${f.id}" ${checked} /></td>
       <td>${i + 1}</td>
@@ -509,6 +520,7 @@ function renderFarmersTable(data) {
       <td data-label="District" style="font-size:0.82rem">${escHtml(district)}</td>
       <td data-label="Land (Ac)">${f.landArea || '\u2014'}</td>
       <td data-label="Crops">${crops}</td>
+      <td data-label="Products" class="products-cell">${productSummary}</td>
       <td data-label="Dealer">${escHtml(f.dealer)}</td>
       <td data-label="Date">${date}</td>
       <td data-label="Actions">
