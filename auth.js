@@ -233,10 +233,17 @@ function onAuthSuccess() {
     document.getElementById('sidebarUserName').textContent  = name;
     document.getElementById('sidebarUserEmail').textContent = email;
   }
-  // Load app data
+  // Load app data, then flush any pending saves from previous offline sessions
   loadFarmers().then(() => {
     renderDashboard();
     if (currentPage === 'farmers') renderFarmersTable(farmers);
+    // Retry any records that failed to sync previously
+    const pending = getPendingIds();
+    if (pending.length) {
+      updateSyncIndicator();
+      showToast(`📡 Syncing ${pending.length} unsaved record(s)…`, '');
+      flushPendingSync();
+    }
   });
 }
 

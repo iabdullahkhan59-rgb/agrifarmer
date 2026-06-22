@@ -124,16 +124,70 @@ async function sbFetch(path, method, body) {
 }
 
 // Save a single farmer (upsert by id)
+// ===== PENDING SYNC QUEUE =====
+// Stores farmer IDs that failed to save to Supabase so they retry automatically
+const PENDING_KEY = 'agritrack_pending_sync';
+
+function getPendingIds() {
+  try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch(e) { return []; }
+}
+function addPending(id) {
+  const ids = getPendingIds();
+  if (!ids.includes(id)) { ids.push(id); localStorage.setItem(PENDING_KEY, JSON.stringify(ids)); }
+  updateSyncIndicator();
+}
+function removePending(id) {
+  const ids = getPendingIds().filter(x => x !== id);
+  localStorage.setItem(PENDING_KEY, JSON.stringify(ids));
+  updateSyncIndicator();
+}
+
+function updateSyncIndicator() {
+  const el = document.getElementById('syncIndicator');
+  if (!el) return;
+  const count = getPendingIds().length;
+  if (count > 0) {
+    el.textContent = `⚠️ ${count} record${count > 1 ? 's' : ''} not yet synced — tap to retry`;
+    el.classList.remove('hidden');
+    el.onclick = () => flushPendingSync();
+  } else {
+    el.classList.add('hidden');
+    el.onclick = null;
+  }
+}
+
+async function flushPendingSync() {
+  const ids = getPendingIds();
+  if (!ids.length) return;
+  console.log('[Sync] Retrying', ids.length, 'pending saves…');
+  for (const id of ids) {
+    const f = farmers.find(x => x.id === id);
+    if (!f) { removePending(id); continue; }
+    const { error } = await sbFetch('/farmers?on_conflict=id', 'POST', farmerToRow(f));
+    if (!error) {
+      removePending(id);
+      console.log('[Sync] Flushed pending save for:', f.name);
+    }
+  }
+  const remaining = getPendingIds().length;
+  if (remaining === 0) showToast('✅ All pending data synced to cloud!', 'success');
+  else showToast(`⚠️ ${remaining} record(s) still pending — will retry when online.`, 'error');
+}
+
 async function saveFarmer(farmer) {
+  // Always save to localStorage first — data is never lost locally
   localStorage.setItem('agritrack_farmers', JSON.stringify(farmers));
   const row = farmerToRow(farmer);
   console.log('[Supabase] Saving farmer:', row.name);
   const { data, error } = await sbFetch('/farmers?on_conflict=id', 'POST', row);
   if (error) {
     console.error('[Supabase] Save error:', error);
-    showToast('Cloud sync failed: ' + (error.message || JSON.stringify(error)), 'error');
+    addPending(farmer.id);
+    showToast('⚠️ Saved locally. Will sync to cloud when connection is restored.', 'error');
   } else {
+    removePending(farmer.id);
     console.log('%c[Supabase] Saved OK', 'color:green;font-weight:bold', data);
+    showToast('✅ Saved and synced to cloud!', 'success');
   }
 }
 
@@ -146,8 +200,11 @@ async function saveFarmers() {
   const { data, error } = await sbFetch('/farmers?on_conflict=id', 'POST', rows);
   if (error) {
     console.error('[Supabase] Bulk save error:', error);
-    showToast('Bulk sync failed: ' + (error.message || JSON.stringify(error)), 'error');
+    // Queue all as pending
+    farmers.forEach(f => addPending(f.id));
+    showToast('⚠️ Saved locally. Will sync to cloud when connection is restored.', 'error');
   } else {
+    farmers.forEach(f => removePending(f.id));
     console.log('%c[Supabase] Bulk save OK', 'color:green;font-weight:bold');
   }
 }
@@ -2184,6 +2241,8 @@ function initRoutePanelEvents() {
     banner.classList.add('show');
     // Auto-dismiss after 3 s
     setTimeout(() => banner.classList.remove('show'), 3000);
+    // Flush any records that failed to save while offline
+    if (typeof flushPendingSync === 'function') flushPendingSync();
     // If there's an active offline route, silently re-fetch the real route
     if (activeRouteFarmerId !== null) {
       const fid = activeRouteFarmerId;
