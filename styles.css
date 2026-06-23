@@ -1539,3 +1539,32 @@ tr.row-selected td { border-color: #c7d2fe; }
   0%,100% { opacity: 1; }
   50%      { opacity: 0.7; }
 }
+
+/* ===== LOCATION CELL IN FARMERS TABLE ===== */
+.location-cell { white-space: nowrap; }
+
+.gps-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 3px 7px;
+  background: #e8eaf6;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.gps-link:hover {
+  background: var(--primary);
+  color: #fff;
+}
+.gps-coords { font-family: monospace; font-size: 0.74rem; }
+.gps-none   { color: #bbb; font-size: 0.78rem; }
+
+@media (max-width: 768px) {
+  .location-cell { white-space: normal; }
+  .gps-link { font-size: 0.72rem; }
+}

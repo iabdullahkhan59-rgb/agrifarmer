@@ -644,7 +644,7 @@ function updateBulkBar() {
 function renderFarmersTable(data) {
   const tbody = document.getElementById('farmersTableBody');
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="12" class="empty-state">No farmers found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" class="empty-state">No farmers found.</td></tr>';
     updateBulkBar();
     return;
   }
@@ -654,6 +654,14 @@ function renderFarmersTable(data) {
     const crops = (f.crops || []).map(c => `<span class="badge badge-green">${c}</span>`).join('');
     const date = f.date ? new Date(f.date).toLocaleDateString('en-PK') : '\u2014';
     const checked = selectedFarmerIds.has(f.id) ? 'checked' : '';
+
+    // Location cell
+    const hasGps = f.lat && f.lng;
+    const locationCell = hasGps
+      ? `<a class="gps-link" href="https://www.google.com/maps?q=${f.lat},${f.lng}" target="_blank" rel="noopener" title="Open in Google Maps">
+           📍 <span class="gps-coords">${parseFloat(f.lat).toFixed(4)}, ${parseFloat(f.lng).toFixed(4)}</span>
+         </a>`
+      : '<span class="gps-none">—</span>';
 
     // Product summary: show each product with bags and its dealer
     const products = (f.products || []).filter(p => p.bags > 0);
@@ -672,6 +680,7 @@ function renderFarmersTable(data) {
       <td data-label="Contact">${escHtml(f.contact)}</td>
       <td data-label="Village/Tehsil" style="font-size:0.82rem">${escHtml(villageTehsil)}</td>
       <td data-label="District" style="font-size:0.82rem">${escHtml(district)}</td>
+      <td data-label="Location" class="location-cell">${locationCell}</td>
       <td data-label="Land (Ac)">${f.landArea || '\u2014'}</td>
       <td data-label="Crops">${crops}</td>
       <td data-label="Products" class="products-cell">${productSummary}</td>
