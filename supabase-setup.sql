@@ -37,8 +37,31 @@ create policy "select_own" on public.farmers
 create policy "insert_own" on public.farmers
   for insert with check (auth.uid() = user_id);
 
+-- Allow update if the row belongs to the user OR if user_id is null
+-- (handles farmers imported before user_id was set)
 create policy "update_own" on public.farmers
-  for update using (auth.uid() = user_id);
+  for update using (auth.uid() = user_id or user_id is null);
 
 create policy "delete_own" on public.farmers
-  for delete using (auth.uid() = user_id);
+  for delete using (auth.uid() = user_id or user_id is null);
+
+-- ============================================================
+-- IMPORTANT: Run these in Supabase SQL Editor to fix existing data
+-- that has NULL user_id (imported farmers, early records etc.)
+-- This is the ROOT CAUSE of products disappearing on reload.
+-- ============================================================
+
+-- Step 1: Drop the old restrictive update policy
+-- drop policy if exists "update_own" on public.farmers;
+
+-- Step 2: Create a permissive update policy that also allows
+-- updating rows where user_id is NULL
+-- create policy "update_own" on public.farmers
+--   for update using (auth.uid() = user_id or user_id is null)
+--   with check (auth.uid() = user_id or user_id is null);
+
+-- Step 3: Fill in the missing user_id for rows that don't have it
+-- (Run this while logged in as the correct user in Supabase Auth)
+-- update public.farmers
+--   set user_id = auth.uid()
+--   where user_id is null;

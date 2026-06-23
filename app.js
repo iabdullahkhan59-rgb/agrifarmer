@@ -84,22 +84,36 @@ function farmerToRow(f) {
   };
 }
 
-// Map db row ? app farmer object
+// Map db row → app farmer object
 function rowToFarmer(r) {
+  // Defensively parse products — Supabase jsonb can sometimes come back
+  // as a string if the column type or PostgREST config differs
+  let products = r.products || [];
+  if (typeof products === 'string') {
+    try { products = JSON.parse(products); } catch(e) { products = []; }
+  }
+  if (!Array.isArray(products)) products = [];
+
+  let crops = r.crops || [];
+  if (typeof crops === 'string') {
+    try { crops = JSON.parse(crops); } catch(e) { crops = crops.split(',').map(c => c.trim()).filter(Boolean); }
+  }
+  if (!Array.isArray(crops)) crops = [];
+
   return {
     id: r.id,
     name: r.name,
     contact: r.contact,
     dealer: r.dealer,
     landArea: r.land_area,
-    crops: r.crops || [],
+    crops,
     village: r.village || '',
     tehsil: r.tehsil || '',
     district: r.district || '',
     province: r.province || '',
     lat: r.lat,
     lng: r.lng,
-    products: r.products || [],
+    products,
     date: r.date
   };
 }
@@ -178,17 +192,48 @@ async function saveFarmer(farmer) {
   // Always save to localStorage first — data is never lost locally
   localStorage.setItem('agritrack_farmers', JSON.stringify(farmers));
   const row = farmerToRow(farmer);
-  console.log('[Supabase] Saving farmer:', row.name);
+  console.log('[Supabase] Saving farmer:', row.name, '| products:', JSON.stringify(row.products));
+
+  // Step 1: Try upsert
   const { data, error } = await sbFetch('/farmers?on_conflict=id', 'POST', row);
+
   if (error) {
     console.error('[Supabase] Save error:', error);
     addPending(farmer.id);
     showToast('⚠️ Saved locally. Will sync to cloud when connection is restored.', 'error');
-  } else {
-    removePending(farmer.id);
-    console.log('%c[Supabase] Saved OK', 'color:green;font-weight:bold', data);
-    showToast('✅ Saved and synced to cloud!', 'success');
+    return;
   }
+
+  // Step 2: Check if upsert actually persisted the products
+  // A silent RLS failure returns an empty array [] instead of the saved row
+  const returned = Array.isArray(data) ? data[0] : data;
+  const productsOK = returned && Array.isArray(returned.products)
+    ? returned.products.length === row.products.length
+    : true; // can't verify, assume OK
+
+  if (!productsOK || !returned) {
+    // Silent failure — upsert was blocked by RLS update policy
+    // Fall back to explicit PATCH (update only)
+    console.warn('[Supabase] Upsert may have been blocked by RLS, trying PATCH…');
+    const patchBody = { products: row.products, dealer: row.dealer, user_id: row.user_id };
+    const { error: patchErr } = await sbFetch(
+      '/farmers?id=eq.' + encodeURIComponent(farmer.id),
+      'PATCH',
+      patchBody
+    );
+    if (patchErr) {
+      console.error('[Supabase] PATCH also failed:', patchErr);
+      addPending(farmer.id);
+      showToast('⚠️ Saved locally. Will sync to cloud when connection is restored.', 'error');
+      return;
+    }
+    console.log('%c[Supabase] PATCH OK — products saved via fallback', 'color:orange;font-weight:bold');
+  } else {
+    console.log('%c[Supabase] Upsert OK — products verified:', 'color:green;font-weight:bold', (returned.products || []).length);
+  }
+
+  removePending(farmer.id);
+  showToast('✅ Saved and synced to cloud!', 'success');
 }
 
 // Save all farmers (bulk upsert)
@@ -227,12 +272,14 @@ async function loadFarmers() {
     console.error('[Supabase] Load error:', error);
     try {
       farmers = JSON.parse(localStorage.getItem('agritrack_farmers') || '[]');
-      // Keep localStorage data in the same order as Supabase would return
       farmers.sort((a, b) => new Date(a.date) - new Date(b.date));
+      console.log('[Cache] Loaded', farmers.length, 'farmers from localStorage');
     } catch(e) { farmers = []; }
   } else {
-    console.log('%c[Supabase] Loaded ' + (data||[]).length + ' farmers', 'color:green;font-weight:bold');
     farmers = (data || []).map(rowToFarmer);
+    // Log how many farmers have products to spot data loss early
+    const withProducts = farmers.filter(f => f.products && f.products.length > 0).length;
+    console.log('%c[Supabase] Loaded ' + farmers.length + ' farmers (' + withProducts + ' with products)', 'color:green;font-weight:bold');
     localStorage.setItem('agritrack_farmers', JSON.stringify(farmers));
   }
 }
