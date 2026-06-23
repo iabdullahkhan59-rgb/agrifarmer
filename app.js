@@ -177,10 +177,23 @@ async function flushPendingSync() {
   for (const id of ids) {
     const f = farmers.find(x => x.id === id);
     if (!f) { removePending(id); continue; }
-    const { error } = await sbFetch('/farmers?on_conflict=id', 'POST', farmerToRow(f));
+    const row = farmerToRow(f);
+    // Try upsert first
+    const { data, error } = await sbFetch('/farmers?on_conflict=id', 'POST', row);
     if (!error) {
+      // Check if upsert was silently blocked — fallback to PATCH then INSERT
+      const returned = Array.isArray(data) ? data[0] : data;
+      if (!returned) {
+        const { error: patchErr } = await sbFetch('/farmers?id=eq.' + encodeURIComponent(id), 'PATCH', row);
+        if (patchErr) {
+          const { error: insertErr } = await sbFetch('/farmers', 'POST', row);
+          if (insertErr) { console.error('[Sync] All retries failed for:', f.name); continue; }
+        }
+      }
       removePending(id);
       console.log('[Sync] Flushed pending save for:', f.name);
+    } else {
+      console.error('[Sync] Retry failed for:', f.name, error);
     }
   }
   const remaining = getPendingIds().length;
@@ -213,21 +226,27 @@ async function saveFarmer(farmer) {
 
   if (!productsOK || !returned) {
     // Silent failure — upsert was blocked by RLS update policy
-    // Fall back to explicit PATCH (update only)
-    console.warn('[Supabase] Upsert may have been blocked by RLS, trying PATCH…');
-    const patchBody = { products: row.products, dealer: row.dealer, user_id: row.user_id };
+    // Fall back to explicit PATCH — send the FULL row, not just products
+    console.warn('[Supabase] Upsert may have been blocked by RLS, trying PATCH with full row…');
     const { error: patchErr } = await sbFetch(
       '/farmers?id=eq.' + encodeURIComponent(farmer.id),
       'PATCH',
-      patchBody
+      row  // send every field, not just products + dealer
     );
     if (patchErr) {
       console.error('[Supabase] PATCH also failed:', patchErr);
-      addPending(farmer.id);
-      showToast('⚠️ Saved locally. Will sync to cloud when connection is restored.', 'error');
-      return;
+      // Last resort: try a fresh INSERT (record may not exist in DB at all)
+      const { error: insertErr } = await sbFetch('/farmers', 'POST', row);
+      if (insertErr) {
+        console.error('[Supabase] INSERT also failed:', insertErr);
+        addPending(farmer.id);
+        showToast('⚠️ Saved locally. Will sync to cloud when connection is restored.', 'error');
+        return;
+      }
+      console.log('%c[Supabase] INSERT OK — record created fresh', 'color:orange;font-weight:bold');
+    } else {
+      console.log('%c[Supabase] PATCH OK — full row saved via fallback', 'color:orange;font-weight:bold');
     }
-    console.log('%c[Supabase] PATCH OK — products saved via fallback', 'color:orange;font-weight:bold');
   } else {
     console.log('%c[Supabase] Upsert OK — products verified:', 'color:green;font-weight:bold', (returned.products || []).length);
   }
@@ -266,18 +285,22 @@ async function deleteFarmerFromDB(id) {
 
 // Load all farmers
 async function loadFarmers() {
+  // Serve cached data instantly so UI shows while Supabase loads
+  try {
+    const cached = JSON.parse(localStorage.getItem('agritrack_farmers') || '[]');
+    if (cached.length) {
+      farmers = cached;
+      farmers.sort((a, b) => new Date(a.date) - new Date(b.date));
+    }
+  } catch(e) {}
+
   console.log('[Supabase] Loading farmers...');
   const { data, error } = await sbFetch('/farmers?order=date.asc', 'GET');
   if (error) {
     console.error('[Supabase] Load error:', error);
-    try {
-      farmers = JSON.parse(localStorage.getItem('agritrack_farmers') || '[]');
-      farmers.sort((a, b) => new Date(a.date) - new Date(b.date));
-      console.log('[Cache] Loaded', farmers.length, 'farmers from localStorage');
-    } catch(e) { farmers = []; }
+    console.log('[Cache] Using', farmers.length, 'farmers from localStorage');
   } else {
     farmers = (data || []).map(rowToFarmer);
-    // Log how many farmers have products to spot data loss early
     const withProducts = farmers.filter(f => f.products && f.products.length > 0).length;
     console.log('%c[Supabase] Loaded ' + farmers.length + ' farmers (' + withProducts + ' with products)', 'color:green;font-weight:bold');
     localStorage.setItem('agritrack_farmers', JSON.stringify(farmers));

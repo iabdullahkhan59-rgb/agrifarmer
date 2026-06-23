@@ -236,7 +236,9 @@ function onAuthSuccess() {
   // Load app data, then flush any pending saves from previous offline sessions
   loadFarmers().then(() => {
     renderDashboard();
+    // Always re-render table after fresh load so Supabase data replaces cache
     if (currentPage === 'farmers') renderFarmersTable(farmers);
+    applyFilters();
     // Retry any records that failed to sync previously
     const pending = getPendingIds();
     if (pending.length) {
