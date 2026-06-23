@@ -307,12 +307,16 @@ async function loadFarmers() {
     const cached = JSON.parse(localStorage.getItem('agritrack_farmers') || '[]');
     if (cached.length) {
       farmers = cached;
-      farmers.sort((a, b) => new Date(a.date) - new Date(b.date));
+      farmers.sort((a, b) => {
+        const dateDiff = new Date(a.date) - new Date(b.date);
+        if (dateDiff !== 0) return dateDiff;
+        return (a.id || '').localeCompare(b.id || ''); // secondary sort by id preserves import order
+      });
     }
   } catch(e) {}
 
   console.log('[Supabase] Loading farmers...');
-  const res = await fetch(REST_URL + '/farmers?order=date.asc', {
+  const res = await fetch(REST_URL + '/farmers?order=date.asc,id.asc', {
     method: 'GET',
     headers: {
       'apikey': SUPABASE_KEY,
@@ -666,8 +670,12 @@ async function handleFormSubmit(e) {
   } else {
     farmers.push(farmer);
   }
-  // Re-sort to match Supabase's date.asc order so the table position is stable
-  farmers.sort((a, b) => new Date(a.date) - new Date(b.date));
+  // Re-sort to match Supabase's date.asc,id.asc order so the table position is stable
+  farmers.sort((a, b) => {
+    const dateDiff = new Date(a.date) - new Date(b.date);
+    if (dateDiff !== 0) return dateDiff;
+    return (a.id || '').localeCompare(b.id || '');
+  });
   const submitBtn = document.getElementById('submitFormBtn');
   submitBtn.disabled = true;
   submitBtn.textContent = '? Saving?';
@@ -1406,7 +1414,10 @@ async function importUploadedData() {
     return String(v).trim();
   };
 
-  parsedUploadRows.forEach(row => {
+  // Use base timestamp + row index offset so date.asc sort = Excel row order
+  const importBaseTime = Date.now();
+
+  parsedUploadRows.forEach((row, rowIndex) => {
     const name     = getVal(row, COL.name);
     const contact  = getVal(row, COL.contact);
     const dealer   = getVal(row, COL.dealer);
@@ -1424,7 +1435,6 @@ async function importUploadedData() {
     if ((!lat || !lng) && COL.location) {
       const locRaw = getVal(row, COL.location);
       if (locRaw) {
-        // Support formats: "30.1234, 72.5678" | "30.1234,72.5678" | "30.1234 72.5678"
         const parts = locRaw.split(/[\s,;]+/).map(p => parseFloat(p)).filter(n => !isNaN(n));
         if (parts.length >= 2) { lat = parts[0]; lng = parts[1]; }
       }
@@ -1432,18 +1442,23 @@ async function importUploadedData() {
 
     if (!name) return;
     const farmer = {
-      id: 'f_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      id: 'f_' + (importBaseTime + rowIndex) + '_' + Math.random().toString(36).slice(2,6),
       name, contact, dealer, landArea, crops,
       village, tehsil, district, province,
       lat, lng,
       products: [],
-      date: new Date().toISOString()
+      // Each row gets a unique timestamp 1ms apart — preserves Excel Sr. order
+      date: new Date(importBaseTime + rowIndex).toISOString()
     };
     farmers.push(farmer);
     imported++;
   });
-  // Sort to keep consistent date.asc order
-  farmers.sort((a, b) => new Date(a.date) - new Date(b.date));
+  // Sort to keep consistent date.asc, id.asc order (preserves Excel Sr. order)
+  farmers.sort((a, b) => {
+    const dateDiff = new Date(a.date) - new Date(b.date);
+    if (dateDiff !== 0) return dateDiff;
+    return (a.id || '').localeCompare(b.id || '');
+  });
   const confirmBtn = document.getElementById('confirmUploadBtn');
   confirmBtn.disabled = true;
   confirmBtn.textContent = '? Syncing?';
