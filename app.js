@@ -407,52 +407,102 @@ function setProductData(products) {
 
 // ===== DUMMY DATA FILL =====
 function fillDummyData() {
-  const names    = ['Muhammad Aslam', 'Ghulam Hussain', 'Abdul Razzaq', 'Tariq Mehmood', 'Zulfiqar Ali', 'Nasir Iqbal', 'Sajid Mahmood', 'Imran Khan', 'Khalid Pervez', 'Bashir Ahmad'];
-  const contacts = ['0300-1234567', '0312-9876543', '0333-4561234', '0345-7890123', '0321-6543210', '0311-2345678', '0301-8765432', '0344-3456789', '0322-5678901', '0313-4321098'];
-  const dealers  = ['Chaudhry Agri Store', 'Al-Madina Fertilizer', 'Pak Kissan Center', 'Green Field Traders', 'Rehman Agri Depot'];
-  const villages = ['Chak 45/WB', 'Chak 12/EB', 'Mauza Khanpur', 'Chak 88/ML', 'Basti Malook'];
-  const tehsils  = ['Vehari', 'Multan', 'Sahiwal', 'Bahawalpur', 'Lodhran'];
-  const districts= ['Vehari', 'Multan', 'Sahiwal', 'Bahawalpur', 'Lodhran'];
-  const provinces= ['Punjab', 'Sindh', 'KPK', 'Balochistan'];
+  const names    = ['Muhammad Aslam', 'Ghulam Hussain', 'Abdul Razzaq', 'Tariq Mehmood', 'Zulfiqar Ali',
+                    'Nasir Iqbal', 'Sajid Mahmood', 'Imran Khan', 'Khalid Pervez', 'Bashir Ahmad',
+                    'Liaqat Ali', 'Rana Tahir', 'Asif Javed', 'Shahbaz Ahmad', 'Faisal Mehmood'];
+  const contacts = ['0300-1234567', '0312-9876543', '0333-4561234', '0345-7890123', '0321-6543210',
+                    '0311-2345678', '0301-8765432', '0344-3456789', '0322-5678901', '0313-4321098',
+                    '0307-1112223', '0318-5556667', '0336-7778889', '0349-0001112', '0302-3334445'];
+  const dealers  = ['Chaudhry Agri Store', 'Al-Madina Fertilizer', 'Pak Kissan Center',
+                    'Green Field Traders', 'Rehman Agri Depot', 'Zafar & Co.', 'Tariq Fertilizers',
+                    'Khan Brothers Agri', 'Bismillah Agro', 'Master Fertilizer'];
+  const villages = ['Chak 45/WB', 'Chak 12/EB', 'Mauza Khanpur', 'Chak 88/ML', 'Basti Malook',
+                    'Chak 33/WB', 'Mauza Tibba', 'Chak 101/EB', 'Basti Ahmad Pur', 'Chak 56/ML'];
+  const tehsils  = ['Vehari', 'Multan', 'Sahiwal', 'Bahawalpur', 'Lodhran',
+                    'Mailsi', 'Burewala', 'Khanewal', 'Pakpattan', 'Chishtian'];
+  const districts= ['Vehari', 'Multan', 'Sahiwal', 'Bahawalpur', 'Lodhran',
+                    'Khanewal', 'Pakpattan', 'Bahawalnagar', 'Okara', 'Faisalabad'];
+  const provinces= ['Punjab', 'Punjab', 'Punjab', 'Sindh', 'KPK'];
   const cropSets = [
-    ['Wheat', 'Cotton'], ['Rice', 'Sugarcane'], ['Maize', 'Wheat'],
-    ['Cotton', 'Sunflower'], ['Wheat', 'Potato', 'Vegetables']
+    ['Wheat', 'Cotton'],
+    ['Rice', 'Sugarcane'],
+    ['Maize', 'Wheat', 'Sunflower'],
+    ['Cotton', 'Sunflower', 'Raya'],
+    ['Wheat', 'Potato', 'Vegetables'],
+    ['Wheat', 'Maize', 'Onion'],
+    ['Rice', 'Wheat', 'Garlic'],
+    ['Cotton', 'Tomato', 'Chilli'],
+    ['Sugarcane', 'Wheat'],
+    ['Maize', 'Raya', 'Garlic']
   ];
-  const lats = [30.1234, 29.8765, 30.5432, 31.2345, 29.4567];
-  const lngs = [71.4321, 72.1234, 71.8765, 72.5678, 71.2345];
+  const customCropOptions = [
+    ['Mung', 'Moong'],
+    ['Lentil', 'Mash'],
+    ['Soybean'],
+    ['Sesame', 'Til'],
+    []
+  ];
+  const gpsPoints = [
+    { lat: 30.0444, lng: 72.3512 }, // Vehari
+    { lat: 30.1978, lng: 71.4681 }, // Multan
+    { lat: 30.6706, lng: 73.1069 }, // Sahiwal
+    { lat: 29.3956, lng: 71.6836 }, // Bahawalpur
+    { lat: 29.5349, lng: 71.6365 }, // Lodhran
+    { lat: 30.2083, lng: 72.1917 }, // Mailsi
+    { lat: 30.1667, lng: 72.6833 }, // Burewala
+    { lat: 30.3019, lng: 71.9239 }, // Khanewal
+  ];
 
-  const r = i => Math.floor(Math.random() * i);
+  const r    = n => Math.floor(Math.random() * n);
   const pick = arr => arr[r(arr.length)];
 
+  // ── Basic fields ──────────────────────────────────────────
   document.getElementById('farmerName').value    = pick(names);
   document.getElementById('contactNumber').value = pick(contacts);
   document.getElementById('dealerName').value    = pick(dealers);
-  document.getElementById('landArea').value      = (Math.floor(Math.random() * 195) + 5) / 10; // 0.5–20 acres
-  document.getElementById('villageName').value   = pick(villages);
-  document.getElementById('tehsilName').value    = pick(tehsils);
-  document.getElementById('districtName').value  = pick(districts);
-  document.getElementById('provinceName').value  = pick(provinces);
+  document.getElementById('landArea').value      = (r(191) + 10) / 10; // 1.0–20.0 acres
 
-  // Crops
-  setSelectedCrops(pick(cropSets));
+  // ── Location ──────────────────────────────────────────────
+  document.getElementById('villageName').value  = pick(villages);
+  const tehIdx = r(tehsils.length);
+  document.getElementById('tehsilName').value   = tehsils[tehIdx];
+  document.getElementById('districtName').value = districts[tehIdx] || pick(districts);
+  document.getElementById('provinceName').value = pick(provinces);
 
-  // GPS
-  const li = r(lats.length);
-  const lat = lats[li] + (Math.random() - 0.5) * 0.1;
-  const lng = lngs[li] + (Math.random() - 0.5) * 0.1;
+  // ── GPS coordinates with small random offset ──────────────
+  const gps = pick(gpsPoints);
+  const lat  = gps.lat + (Math.random() - 0.5) * 0.2;
+  const lng  = gps.lng + (Math.random() - 0.5) * 0.2;
   document.getElementById('latitude').value  = lat.toFixed(6);
   document.getElementById('longitude').value = lng.toFixed(6);
-  if (mapInstance) setMapMarker(lat, lng);
+  if (typeof mapInstance !== 'undefined' && mapInstance) setMapMarker(lat, lng);
 
-  // Fertilizer products — fill 2–3 random products
+  // ── Crops (predefined checkboxes) ─────────────────────────
+  const chosenCrops = pick(cropSets);
+  setSelectedCrops(chosenCrops);
+
+  // ── Custom crops ──────────────────────────────────────────
+  customCrops = pick(customCropOptions).slice(); // may be empty
+  renderCustomCropTags();
+
+  // ── Fertilizer products — fill ALL products with bags + dealer
   document.querySelectorAll('.product-row .prod-bags').forEach(i => i.value = '');
   document.querySelectorAll('.product-row .prod-dealer').forEach(i => i.value = '');
-  const shuffled = [...ALL_PRODUCTS].sort(() => Math.random() - 0.5).slice(0, 3);
-  shuffled.forEach(prod => {
-    const bagsInput  = document.querySelector(`.prod-bags[data-id="${prod.id}"]`);
-    const dealerInput = document.querySelector(`.prod-dealer[data-id="${prod.id}"]`);
-    if (bagsInput)  bagsInput.value  = r(10) + 1;
-    if (dealerInput) dealerInput.value = pick(dealers);
+
+  // Pick 2–4 products to fill (always include at least one Sona product)
+  const sonaProds  = ALL_PRODUCTS.filter(p => p.brand.includes('Sona'));
+  const otherProds = ALL_PRODUCTS.filter(p => !p.brand.includes('Sona'));
+  const numOther   = r(3) + 1; // 1–3 other products
+  const chosen = [
+    pick(sonaProds),
+    ...otherProds.sort(() => Math.random() - 0.5).slice(0, numOther)
+  ];
+  const prodDealer = pick(dealers);
+  chosen.forEach(prod => {
+    const bagsEl   = document.querySelector(`.prod-bags[data-id="${prod.id}"]`);
+    const dealerEl = document.querySelector(`.prod-dealer[data-id="${prod.id}"]`);
+    if (bagsEl)   bagsEl.value   = r(20) + 1;      // 1–20 bags/bottles
+    if (dealerEl) dealerEl.value = prodDealer;
   });
 }
 
