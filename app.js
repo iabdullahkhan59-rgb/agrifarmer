@@ -65,6 +65,12 @@ let currentPage = 'dashboard';
 
 // Map app farmer object ? db row
 function farmerToRow(f) {
+  // Ensure user_id is always the current user — never null if logged in
+  const uid = (typeof currentUser !== 'undefined' && currentUser && currentUser.id)
+    ? currentUser.id
+    : (typeof authToken !== 'undefined' && authToken
+        ? (() => { try { return JSON.parse(atob(authToken.split('.')[1])).sub; } catch(e) { return null; } })()
+        : null);
   return {
     id: f.id,
     name: f.name,
@@ -80,7 +86,7 @@ function farmerToRow(f) {
     lng: f.lng || null,
     products: f.products || [],
     date: f.date,
-    user_id: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null
+    user_id: uid
   };
 }
 
@@ -202,57 +208,68 @@ async function flushPendingSync() {
 }
 
 async function saveFarmer(farmer) {
-  // Always save to localStorage first — data is never lost locally
+  // Always save to localStorage first — data is NEVER lost locally
   localStorage.setItem('agritrack_farmers', JSON.stringify(farmers));
+
   const row = farmerToRow(farmer);
-  console.log('[Supabase] Saving farmer:', row.name, '| products:', JSON.stringify(row.products));
+  console.log('[Save] Farmer:', row.name, '| user_id:', row.user_id, '| products:', row.products.length);
 
-  // Step 1: Try upsert
-  const { data, error } = await sbFetch('/farmers?on_conflict=id', 'POST', row);
+  if (!row.user_id) {
+    console.warn('[Save] user_id is null — will try anyway but RLS may block it');
+  }
 
-  if (error) {
-    console.error('[Supabase] Save error:', error);
+  // Use upsert with merge-duplicates resolution
+  const res = await fetch(REST_URL + '/farmers', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + (typeof authToken !== 'undefined' && authToken ? authToken : SUPABASE_KEY),
+      'Prefer': 'resolution=merge-duplicates,return=representation'
+    },
+    body: JSON.stringify(row)
+  });
+
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch(e) {}
+
+  if (!res.ok) {
+    console.error('[Save] HTTP', res.status, '| Error:', text);
     addPending(farmer.id);
-    showToast('⚠️ Saved locally. Will sync to cloud when connection is restored.', 'error');
+    showToast('⚠️ Saved locally — cloud sync failed (' + res.status + '). Tap ⚠️ to retry.', 'error');
     return;
   }
 
-  // Step 2: Check if upsert actually persisted the products
-  // A silent RLS failure returns an empty array [] instead of the saved row
-  const returned = Array.isArray(data) ? data[0] : data;
-  const productsOK = returned && Array.isArray(returned.products)
-    ? returned.products.length === row.products.length
-    : true; // can't verify, assume OK
-
-  if (!productsOK || !returned) {
-    // Silent failure — upsert was blocked by RLS update policy
-    // Fall back to explicit PATCH — send the FULL row, not just products
-    console.warn('[Supabase] Upsert may have been blocked by RLS, trying PATCH with full row…');
-    const { error: patchErr } = await sbFetch(
-      '/farmers?id=eq.' + encodeURIComponent(farmer.id),
-      'PATCH',
-      row  // send every field, not just products + dealer
-    );
-    if (patchErr) {
-      console.error('[Supabase] PATCH also failed:', patchErr);
-      // Last resort: try a fresh INSERT (record may not exist in DB at all)
-      const { error: insertErr } = await sbFetch('/farmers', 'POST', row);
-      if (insertErr) {
-        console.error('[Supabase] INSERT also failed:', insertErr);
-        addPending(farmer.id);
-        showToast('⚠️ Saved locally. Will sync to cloud when connection is restored.', 'error');
-        return;
-      }
-      console.log('%c[Supabase] INSERT OK — record created fresh', 'color:orange;font-weight:bold');
-    } else {
-      console.log('%c[Supabase] PATCH OK — full row saved via fallback', 'color:orange;font-weight:bold');
+  const saved = Array.isArray(data) ? data[0] : data;
+  if (!saved) {
+    // Supabase returned 200 but empty body — silent RLS block
+    console.warn('[Save] Empty response — RLS may be blocking. Trying PATCH…');
+    const patchRes = await fetch(REST_URL + '/farmers?id=eq.' + encodeURIComponent(farmer.id), {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + (typeof authToken !== 'undefined' && authToken ? authToken : SUPABASE_KEY),
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(row)
+    });
+    const patchText = await patchRes.text();
+    if (!patchRes.ok) {
+      console.error('[Save] PATCH failed:', patchRes.status, patchText);
+      addPending(farmer.id);
+      showToast('⚠️ Saved locally — cloud sync failed. Tap ⚠️ to retry.', 'error');
+      return;
     }
+    console.log('%c[Save] PATCH OK', 'color:orange;font-weight:bold');
   } else {
-    console.log('%c[Supabase] Upsert OK — products verified:', 'color:green;font-weight:bold', (returned.products || []).length);
+    console.log('%c[Save] Upsert OK | products in DB:', 'color:green;font-weight:bold',
+      Array.isArray(saved.products) ? saved.products.length : '?');
   }
 
   removePending(farmer.id);
-  showToast('✅ Saved and synced to cloud!', 'success');
+  showToast('✅ Saved and synced!', 'success');
 }
 
 // Save all farmers (bulk upsert)
@@ -295,16 +312,37 @@ async function loadFarmers() {
   } catch(e) {}
 
   console.log('[Supabase] Loading farmers...');
-  const { data, error } = await sbFetch('/farmers?order=date.asc', 'GET');
-  if (error) {
-    console.error('[Supabase] Load error:', error);
+  const res = await fetch(REST_URL + '/farmers?order=date.asc', {
+    method: 'GET',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + (typeof authToken !== 'undefined' && authToken ? authToken : SUPABASE_KEY),
+      'Content-Type': 'application/json'
+    }
+  });
+
+  const text = await res.text();
+  if (!res.ok) {
+    console.error('[Load] HTTP', res.status, text);
     console.log('[Cache] Using', farmers.length, 'farmers from localStorage');
-  } else {
-    farmers = (data || []).map(rowToFarmer);
-    const withProducts = farmers.filter(f => f.products && f.products.length > 0).length;
-    console.log('%c[Supabase] Loaded ' + farmers.length + ' farmers (' + withProducts + ' with products)', 'color:green;font-weight:bold');
-    localStorage.setItem('agritrack_farmers', JSON.stringify(farmers));
+    return;
   }
+
+  let data = [];
+  try { data = JSON.parse(text) || []; } catch(e) {}
+
+  farmers = data.map(rowToFarmer);
+  const withProducts = farmers.filter(f => f.products && f.products.length > 0).length;
+  console.log('%c[Supabase] Loaded ' + farmers.length + ' farmers (' + withProducts + ' with products)', 'color:green;font-weight:bold');
+
+  // Diagnostic: check for rows with missing user_id
+  const nullUid = data.filter(r => !r.user_id).length;
+  if (nullUid > 0) {
+    console.warn('[Diagnostic] ' + nullUid + ' rows have NULL user_id — these will fail RLS on update!');
+    console.warn('[Diagnostic] Run this in Supabase SQL Editor: UPDATE public.farmers SET user_id = auth.uid() WHERE user_id IS NULL;');
+  }
+
+  localStorage.setItem('agritrack_farmers', JSON.stringify(farmers));
 }
 // ===== TOAST =====
 function showToast(msg, type = '') {
