@@ -183,28 +183,16 @@ async function flushPendingSync() {
   for (const id of ids) {
     const f = farmers.find(x => x.id === id);
     if (!f) { removePending(id); continue; }
-    const row = farmerToRow(f);
-    // Try upsert first
-    const { data, error } = await sbFetch('/farmers?on_conflict=id', 'POST', row);
-    if (!error) {
-      // Check if upsert was silently blocked — fallback to PATCH then INSERT
-      const returned = Array.isArray(data) ? data[0] : data;
-      if (!returned) {
-        const { error: patchErr } = await sbFetch('/farmers?id=eq.' + encodeURIComponent(id), 'PATCH', row);
-        if (patchErr) {
-          const { error: insertErr } = await sbFetch('/farmers', 'POST', row);
-          if (insertErr) { console.error('[Sync] All retries failed for:', f.name); continue; }
-        }
-      }
-      removePending(id);
-      console.log('[Sync] Flushed pending save for:', f.name);
-    } else {
-      console.error('[Sync] Retry failed for:', f.name, error);
+    try {
+      await saveFarmer(f);
+      console.log('[Sync] Flushed:', f.name);
+    } catch(e) {
+      console.error('[Sync] Failed for:', f.name, e);
     }
   }
   const remaining = getPendingIds().length;
-  if (remaining === 0) showToast('✅ All pending data synced to cloud!', 'success');
-  else showToast(`⚠️ ${remaining} record(s) still pending — will retry when online.`, 'error');
+  if (remaining === 0) showToast('✅ All pending data synced!', 'success');
+  else showToast(`⚠️ ${remaining} record(s) still pending.`, 'error');
 }
 
 async function saveFarmer(farmer) {
@@ -218,33 +206,23 @@ async function saveFarmer(farmer) {
     console.warn('[Save] user_id is null — will try anyway but RLS may block it');
   }
 
-  // Use upsert with merge-duplicates resolution
-  const res = await fetch(REST_URL + '/farmers', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_KEY,
-      'Authorization': 'Bearer ' + (typeof authToken !== 'undefined' && authToken ? authToken : SUPABASE_KEY),
-      'Prefer': 'resolution=merge-duplicates,return=representation'
-    },
-    body: JSON.stringify(row)
-  });
+  // Try PATCH first for existing records (most reliable for updates)
+  // PATCH only updates what you send — no conflict issues
+  const isExisting = farmers.some(f => f.id === farmer.id && f !== farmer) ||
+    (await (async () => {
+      // Quick existence check
+      const chk = await fetch(REST_URL + '/farmers?id=eq.' + encodeURIComponent(farmer.id) + '&select=id', {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + (typeof authToken !== 'undefined' && authToken ? authToken : SUPABASE_KEY)
+        }
+      });
+      const chkData = await chk.json().catch(() => []);
+      return Array.isArray(chkData) && chkData.length > 0;
+    })());
 
-  const text = await res.text();
-  let data = null;
-  try { data = text ? JSON.parse(text) : null; } catch(e) {}
-
-  if (!res.ok) {
-    console.error('[Save] HTTP', res.status, '| Error:', text);
-    addPending(farmer.id);
-    showToast('⚠️ Saved locally — cloud sync failed (' + res.status + '). Tap ⚠️ to retry.', 'error');
-    return;
-  }
-
-  const saved = Array.isArray(data) ? data[0] : data;
-  if (!saved) {
-    // Supabase returned 200 but empty body — silent RLS block
-    console.warn('[Save] Empty response — RLS may be blocking. Trying PATCH…');
+  if (isExisting) {
+    // Record exists — use PATCH to update all fields
     const patchRes = await fetch(REST_URL + '/farmers?id=eq.' + encodeURIComponent(farmer.id), {
       method: 'PATCH',
       headers: {
@@ -256,16 +234,38 @@ async function saveFarmer(farmer) {
       body: JSON.stringify(row)
     });
     const patchText = await patchRes.text();
+    let patchData = null;
+    try { patchData = JSON.parse(patchText); } catch(e) {}
+
     if (!patchRes.ok) {
       console.error('[Save] PATCH failed:', patchRes.status, patchText);
       addPending(farmer.id);
-      showToast('⚠️ Saved locally — cloud sync failed. Tap ⚠️ to retry.', 'error');
+      showToast('⚠️ Saved locally — cloud sync failed (' + patchRes.status + '). Tap ⚠️ to retry.', 'error');
       return;
     }
-    console.log('%c[Save] PATCH OK', 'color:orange;font-weight:bold');
+    const saved = Array.isArray(patchData) ? patchData[0] : patchData;
+    console.log('%c[Save] PATCH OK | products in DB:', 'color:green;font-weight:bold',
+      saved && Array.isArray(saved.products) ? saved.products.length : '?');
   } else {
-    console.log('%c[Save] Upsert OK | products in DB:', 'color:green;font-weight:bold',
-      Array.isArray(saved.products) ? saved.products.length : '?');
+    // New record — use POST/INSERT
+    const insertRes = await fetch(REST_URL + '/farmers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + (typeof authToken !== 'undefined' && authToken ? authToken : SUPABASE_KEY),
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(row)
+    });
+    const insertText = await insertRes.text();
+    if (!insertRes.ok) {
+      console.error('[Save] INSERT failed:', insertRes.status, insertText);
+      addPending(farmer.id);
+      showToast('⚠️ Saved locally — cloud sync failed (' + insertRes.status + '). Tap ⚠️ to retry.', 'error');
+      return;
+    }
+    console.log('%c[Save] INSERT OK', 'color:green;font-weight:bold');
   }
 
   removePending(farmer.id);
